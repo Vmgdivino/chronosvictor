@@ -22,6 +22,10 @@ const spotlights: Record<string, string> = {
   velozes: "fast-7",
   "star-wars": "sw-anh",
   dceu: "dceu-ww",
+  "harry-potter": "hp-1",
+  "terra-media": "lotr-1",
+  jurassic: "jp-1",
+  "indiana-jones": "indy-raiders",
 };
 
 function inkFor(accent: string) {
@@ -80,7 +84,7 @@ export function FranchiseView({ slug }: { slug: string }) {
             <div className="mt-6 max-w-md">
               <div className="mb-2 flex items-center justify-between text-sm">
                 <span>
-                  {ready ? `${progress.done} de ${progress.total} filmes` : "Progresso neste navegador"}
+                  {ready ? `${progress.done} de ${progress.total} filmes` : "Progresso da sua conta"}
                 </span>
                 <span className="font-medium">{ready ? `${progress.percent}%` : "—"}</span>
               </div>

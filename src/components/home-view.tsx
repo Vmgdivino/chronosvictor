@@ -36,13 +36,14 @@ export function HomeView() {
     <div className="space-y-12">
       <section className="grid gap-8 lg:grid-cols-[1.15fr_0.85fr] lg:items-end">
         <div>
-          <p className="text-xs font-medium uppercase tracking-[0.32em] text-gold">Sala de cronologias</p>
+          <p className="text-xs font-medium uppercase tracking-[0.32em] text-gold">Em sessão</p>
           <h1 className="mt-3 max-w-xl font-display text-5xl leading-[0.95] tracking-tight sm:text-6xl">
-            A história na ordem certa.
+            As luzes baixam.
+            <span className="mt-1 block text-gold">A saga, no tempo certo.</span>
           </h1>
           <p className="mt-4 max-w-lg text-base leading-relaxed text-muted">
-            Marvel, Velozes e Furiosos, Star Wars e o Universo Estendido da DC — cada filme no lugar em que a
-            história acontece, com o seu progresso guardado neste navegador.
+            Universos inteiros, montados como foram vividos. A maratona fica na sua conta e reabre no mesmo frame
+            quando você volta à sala.
           </p>
         </div>
         <div className="grid grid-cols-3 gap-3">
@@ -93,7 +94,7 @@ export function HomeView() {
         <div className="mb-5 flex items-end justify-between gap-4">
           <div>
             <h2 className="font-display text-3xl">Franquias</h2>
-            <p className="mt-1 text-sm text-muted">Quatro cronologias prontas para maratonar.</p>
+            <p className="mt-1 text-sm text-muted">{franchises.length} cronologias prontas para maratonar.</p>
           </div>
         </div>
         <div className="grid gap-5 sm:grid-cols-2">

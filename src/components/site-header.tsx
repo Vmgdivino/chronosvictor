@@ -3,7 +3,7 @@
 import { catalogProgress } from "@/lib/progress";
 import { franchises } from "@/lib/franchises";
 import { useWatched } from "@/context/watched-context";
-import { Clapperboard } from "lucide-react";
+import { Clapperboard, LogOut } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -14,7 +14,7 @@ const links = [
 
 export function SiteHeader() {
   const pathname = usePathname();
-  const { watched, ready } = useWatched();
+  const { watched, ready, user, logout } = useWatched();
   const catalog = catalogProgress(franchises, watched);
 
   return (
@@ -52,6 +52,17 @@ export function SiteHeader() {
               );
             })}
           </nav>
+          {user ? (
+            <button
+              type="button"
+              onClick={logout}
+              className="inline-flex items-center gap-1.5 rounded-full border border-white/10 px-3 py-1.5 text-sm text-muted transition hover:text-white"
+            >
+              <span className="max-w-24 truncate text-foreground">{user}</span>
+              <LogOut className="h-3.5 w-3.5" aria-hidden />
+              <span className="sr-only">Sair</span>
+            </button>
+          ) : null}
         </div>
       </div>
     </header>

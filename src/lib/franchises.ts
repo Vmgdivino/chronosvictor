@@ -1,3 +1,4 @@
+import { extraFranchises } from "@/lib/extra-franchises";
 import type { Franchise } from "@/lib/types";
 
 export const franchises: Franchise[] = [
@@ -869,7 +870,8 @@ export const franchises: Franchise[] = [
       tags: [],
     }
     ],
-  }
+  },
+  ...extraFranchises,
 ];
 
 export function getFranchise(slug: string) {

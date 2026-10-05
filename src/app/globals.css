@@ -22,14 +22,12 @@
 html {
   color-scheme: dark;
   scroll-behavior: smooth;
+  background: #07080c;
 }
 
 body {
   min-height: 100%;
-  background:
-    radial-gradient(900px 420px at 100% -10%, rgba(231, 195, 106, 0.14), transparent 55%),
-    radial-gradient(700px 380px at -10% 10%, rgba(90, 120, 255, 0.12), transparent 50%),
-    var(--background);
+  background: transparent;
   color: var(--foreground);
   font-family: var(--font-sans);
 }

@@ -42,8 +42,7 @@ export function AchievementsView() {
         <p className="text-xs uppercase tracking-[0.28em] text-gold">Minhas conquistas</p>
         <h1 className="mt-3 font-display text-5xl leading-none">O que a sua maratona já provou.</h1>
         <p className="mt-4 max-w-2xl text-muted">
-          Sênior fecha universos. Profissional encara as metas longas. Tudo fica salvo neste navegador, junto com os
-          filmes que você marcar.
+          Sênior fecha universos. Profissional encara as metas longas. A sequência fica na sua conta e volta quando a sessão abre.
         </p>
         <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
           <Metric label="Assistidos" value={ready ? String(catalog.done) : "—"} />
@@ -117,7 +116,7 @@ export function AchievementsView() {
       <button
         type="button"
         onClick={() => {
-          if (window.confirm("Apagar todos os filmes marcados como assistidos neste navegador?")) {
+          if (window.confirm("Apagar os filmes marcados como assistidos nesta conta?")) {
             clear();
           }
         }}
