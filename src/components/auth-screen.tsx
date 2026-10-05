@@ -1,5 +1,6 @@
 "use client";
 
+import { SoundToggle } from "@/components/sound-toggle";
 import { useWatched } from "@/context/watched-context";
 import { Clapperboard } from "lucide-react";
 import { useState, type FormEvent } from "react";
@@ -24,6 +25,9 @@ export function AuthScreen() {
 
   return (
     <div className="relative z-10 flex min-h-full flex-1 items-center justify-center px-4 py-16">
+      <div className="absolute right-3 top-3 sm:right-6 sm:top-6">
+        <SoundToggle />
+      </div>
       <div className="w-full max-w-md rounded-[28px] border border-white/10 bg-black/45 p-6 shadow-2xl backdrop-blur-xl sm:p-8">
         <div className="flex items-center gap-2.5">
           <span className="grid h-9 w-9 place-items-center rounded-full border border-gold/40 bg-gold/10 text-gold">

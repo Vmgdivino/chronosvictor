@@ -135,7 +135,7 @@ export function FranchiseView({ slug }: { slug: string }) {
                 role="tab"
                 aria-selected={active}
                 onClick={() => setFilter(item.id)}
-                className={`rounded-full px-4 py-2 text-sm transition ${
+                className={`min-h-11 rounded-full px-4 py-2 text-sm transition ${
                   active ? "text-black" : "border border-white/10 bg-white/5 text-white/75 hover:text-white"
                 }`}
                 style={active ? { background: franchise.accent, color: ink } : undefined}
@@ -232,7 +232,7 @@ export function FranchiseView({ slug }: { slug: string }) {
                           aria-pressed={started}
                           disabled={seen}
                           onClick={() => toggleWatching(movie.id)}
-                          className={`inline-flex items-center justify-center gap-2 rounded-full px-4 py-2.5 text-sm font-medium transition active:scale-[0.98] ${
+                          className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-full px-4 py-2.5 text-sm font-medium transition active:scale-[0.98] ${
                             started
                               ? "bg-gold text-black shadow-[0_0_24px_rgba(231,195,106,0.35)]"
                               : "border border-white/15 bg-white/5 text-white/85 hover:border-gold/60 hover:text-white"
@@ -252,7 +252,7 @@ export function FranchiseView({ slug }: { slug: string }) {
                           type="button"
                           aria-pressed={seen}
                           onClick={() => toggle(movie.id)}
-                          className={`inline-flex items-center justify-center gap-2 rounded-full px-4 py-2.5 text-sm font-medium transition active:scale-[0.98] ${
+                          className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-full px-4 py-2.5 text-sm font-medium transition active:scale-[0.98] ${
                             seen
                               ? "bg-emerald-400/15 text-emerald-300 ring-1 ring-emerald-400/40"
                               : "bg-white text-black hover:bg-white/90"
