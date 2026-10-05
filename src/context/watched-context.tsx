@@ -4,6 +4,7 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useSyncExternalStore,
   type ReactNode,
@@ -79,9 +80,31 @@ function readStore(): AccountStore {
   }
 }
 
+const RANKING_EVENT = "chronosvictor-ranking";
+let publishTimer = 0;
+
+function schedulePublish(store: AccountStore) {
+  window.clearTimeout(publishTimer);
+  publishTimer = window.setTimeout(() => {
+    const accounts = Object.values(store.users).map((user) => ({
+      name: user.name,
+      watched: listOf(user.watched),
+    }));
+    if (!accounts.length) return;
+    void fetch("/api/ranking", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ accounts }),
+    })
+      .then(() => window.dispatchEvent(new Event(RANKING_EVENT)))
+      .catch(() => undefined);
+  }, 250);
+}
+
 function writeStore(store: AccountStore) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(store));
   window.dispatchEvent(new Event(CHANGE_EVENT));
+  schedulePublish(store);
 }
 
 function listOf(value: unknown) {
@@ -142,6 +165,10 @@ function validate(username: string, password: string): AuthResult | null {
 
 export function WatchedProvider({ children }: { children: ReactNode }) {
   const raw = useSyncExternalStore(subscribe, getClientSnapshot, getServerSnapshot);
+
+  useEffect(() => {
+    schedulePublish(readStore());
+  }, []);
   const snapshot = useMemo(() => {
     const parsed = JSON.parse(raw) as {
       booted: boolean;

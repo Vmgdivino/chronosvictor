@@ -1,8 +1,9 @@
 "use client";
 
-import { useRankAccounts, useWatched } from "@/context/watched-context";
+import { useRankAccounts, useWatched, type RankAccount } from "@/context/watched-context";
 import { buildRanking, type RankedUser } from "@/lib/ranking";
 import { Medal, Trophy } from "lucide-react";
+import { useEffect, useState } from "react";
 
 const podiumOrder = [2, 1, 3];
 
@@ -74,9 +75,43 @@ function PodiumSlot({ user }: { user?: RankedUser }) {
   );
 }
 
+function accountKey(name: string) {
+  return name.trim().replace(/\s+/g, " ").toLocaleLowerCase();
+}
+
+function mergeAccounts(local: RankAccount[], remote: RankAccount[]) {
+  const merged = new Map<string, RankAccount>();
+  for (const account of remote) merged.set(accountKey(account.name), account);
+  for (const account of local) merged.set(accountKey(account.name), account);
+  return [...merged.values()];
+}
+
 export function RankingView() {
-  const accounts = useRankAccounts();
+  const local = useRankAccounts();
   const { user } = useWatched();
+  const [remote, setRemote] = useState<RankAccount[]>([]);
+
+  useEffect(() => {
+    let ignore = false;
+    const load = () => {
+      fetch("/api/ranking", { cache: "no-store" })
+        .then((response) => response.json())
+        .then((data: { accounts?: RankAccount[] }) => {
+          if (!ignore && Array.isArray(data.accounts)) setRemote(data.accounts);
+        })
+        .catch(() => undefined);
+    };
+    load();
+    window.addEventListener("chronosvictor-ranking", load);
+    const timer = window.setInterval(load, 15000);
+    return () => {
+      ignore = true;
+      window.removeEventListener("chronosvictor-ranking", load);
+      window.clearInterval(timer);
+    };
+  }, []);
+
+  const accounts = mergeAccounts(local, remote);
   const ranking = buildRanking(accounts);
   const byPlace = new Map(ranking.map((row) => [row.place, row]));
 
@@ -86,13 +121,13 @@ export function RankingView() {
         <p className="text-[11px] uppercase tracking-[0.28em] text-gold">Sala</p>
         <h1 className="mt-2 font-display text-4xl sm:text-6xl">Quem está à frente.</h1>
         <p className="mt-4 max-w-2xl text-sm leading-relaxed text-white/70 sm:text-base">
-          O pódio compara as contas deste navegador. Fecha uma cronologia e o troféu leva o nome dela. O ouro vai para quem tem mais sagas completas e, no desempate, mais títulos.
+          O pódio junta todas as contas cadastradas. Fecha uma cronologia e o troféu leva o nome dela. O ouro vai para quem tem mais sagas completas e, no desempate, mais títulos.
         </p>
       </section>
 
       {ranking.length === 0 ? (
         <p className="rounded-2xl border border-dashed border-white/15 px-4 py-10 text-center text-sm text-muted">
-          Ainda não há contas nesta sala. Crie uma para entrar no pódio.
+          Ainda não há contas no ranking. Entre numa conta para publicar o seu lugar.
         </p>
       ) : (
         <>
