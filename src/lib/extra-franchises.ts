@@ -1,4 +1,4 @@
-import type { Franchise, Movie } from "@/lib/types";
+import type { FranchiseSource, MovieSource } from "@/lib/types";
 
 function poster(imdbId: string) {
   return `https://images.metahub.space/poster/large/${imdbId}/img`;
@@ -19,7 +19,7 @@ function film(
   chapter: string,
   tags: string[],
   note?: string,
-): Movie {
+): MovieSource {
   return {
     id,
     title,
@@ -34,7 +34,7 @@ function film(
   };
 }
 
-export const extraFranchises: Franchise[] = [
+export const extraFranchises: FranchiseSource[] = [
   {
     slug: "harry-potter",
     name: "Mundo Bruxo",

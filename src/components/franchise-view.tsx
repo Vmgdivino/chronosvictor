@@ -2,6 +2,7 @@
 
 import { Poster } from "@/components/poster";
 import { ProgressBar } from "@/components/progress-bar";
+import { playMovie } from "@/context/sound-context";
 import { useWatched } from "@/context/watched-context";
 import { formatRuntime } from "@/lib/format";
 import { getFranchise } from "@/lib/franchises";
@@ -101,7 +102,7 @@ export function FranchiseView({ slug }: { slug: string }) {
             <div className="mt-6 max-w-md">
               <div className="mb-2 flex items-center justify-between text-sm">
                 <span>
-                  {ready ? `${progress.done} de ${progress.total} filmes` : "Progresso da sua conta"}
+                  {ready ? `${progress.done} de ${progress.total} títulos` : "Progresso da sua conta"}
                 </span>
                 <span className="font-medium">{ready ? `${progress.percent}%` : "—"}</span>
               </div>
@@ -149,7 +150,7 @@ export function FranchiseView({ slug }: { slug: string }) {
           })}
         </div>
         <p className="text-sm text-muted">
-          {visible.length} {visible.length === 1 ? "filme nesta lista" : "filmes nesta lista"}
+          {visible.length} {visible.length === 1 ? "título nesta lista" : "títulos nesta lista"}
         </p>
       </div>
 
@@ -199,6 +200,19 @@ export function FranchiseView({ slug }: { slug: string }) {
                     }`}
                   >
                     <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+                      <div
+                        role="button"
+                        tabIndex={0}
+                        aria-label={`Ouvir o tema de ${movie.title}`}
+                        onClick={() => playMovie(movie, franchise)}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter" || event.key === " ") {
+                            event.preventDefault();
+                            playMovie(movie, franchise);
+                          }
+                        }}
+                        className="flex min-w-0 flex-1 cursor-pointer gap-4 rounded-xl text-left"
+                      >
                       <div className={`relative h-36 w-24 shrink-0 overflow-hidden rounded-xl ${seen ? "opacity-60" : ""}`}>
                         <Poster src={movie.poster} alt={`Pôster de ${movie.title}`} className="h-full w-full object-cover" />
                         {seen ? (
@@ -216,15 +230,22 @@ export function FranchiseView({ slug }: { slug: string }) {
                       <div className={`min-w-0 flex-1 ${seen ? "opacity-70" : ""}`}>
                         <div className="flex flex-wrap items-center gap-2">
                           <h2 className="font-display text-2xl leading-tight">{movie.title}</h2>
+                          {movie.kind === "series" ? (
+                            <span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-black">
+                              Série
+                            </span>
+                          ) : null}
                           <span className="rounded-full border border-white/10 px-2 py-0.5 text-xs text-white/70">
                             {movie.year}
                           </span>
                         </div>
                         <p className="mt-1 text-xs text-muted">
-                          {movie.setting} · {formatRuntime(movie.runtime)}
+                          {movie.setting} · {movie.kind === "series" && movie.episodes ? `${movie.episodes} episódios · ` : ""}
+                          {formatRuntime(movie.runtime)}
                         </p>
                         <p className="mt-2 text-sm leading-relaxed text-white/70">{movie.synopsis}</p>
                         {movie.note ? <p className="mt-2 text-xs italic text-gold/90">{movie.note}</p> : null}
+                      </div>
                       </div>
                       <div className="flex w-full shrink-0 flex-col gap-2 sm:w-56">
                         <button

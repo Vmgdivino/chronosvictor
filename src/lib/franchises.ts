@@ -1,8 +1,10 @@
 import { extraFranchises } from "@/lib/extra-franchises";
 import { moreFranchises } from "@/lib/more-franchises";
-import type { Franchise } from "@/lib/types";
+import { soundtracks } from "@/lib/soundtracks";
+import { timelineInserts } from "@/lib/timeline-inserts";
+import type { Franchise, FranchiseSource } from "@/lib/types";
 
-export const franchises: Franchise[] = [
+const franchiseSources: FranchiseSource[] = [
   {
     slug: "marvel",
     name: "Universo Marvel",
@@ -875,6 +877,33 @@ export const franchises: Franchise[] = [
   ...extraFranchises,
   ...moreFranchises,
 ];
+
+function placeInserts(source: FranchiseSource): FranchiseSource {
+  const queued = timelineInserts[source.slug];
+  if (!queued?.length) return source;
+  const movies = [...source.movies];
+  for (const insert of queued) {
+    if (movies.some((movie) => movie.id === insert.item.id)) continue;
+    const anchor = insert.after
+      ? movies.findIndex((movie) => movie.id === insert.after)
+      : movies.findIndex((movie) => movie.id === insert.before);
+    if (anchor < 0) continue;
+    movies.splice(insert.after ? anchor + 1 : anchor, 0, insert.item);
+  }
+  return { ...source, movies };
+}
+
+export const franchises: Franchise[] = franchiseSources.map((source) => {
+  const placed = placeInserts(source);
+  return {
+    ...placed,
+    movies: placed.movies.map((movie) => {
+      const soundtrack = soundtracks[movie.id];
+      if (!soundtrack) throw new Error(`Trilha em falta para ${movie.id}`);
+      return { ...movie, kind: movie.kind ?? "movie", soundtrack };
+    }),
+  };
+});
 
 export function getFranchise(slug: string) {
   return franchises.find((franchise) => franchise.slug === slug);

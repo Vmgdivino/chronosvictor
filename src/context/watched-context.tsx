@@ -277,6 +277,31 @@ export function WatchedProvider({ children }: { children: ReactNode }) {
   return <WatchedContext.Provider value={value}>{children}</WatchedContext.Provider>;
 }
 
+export type RankAccount = {
+  name: string;
+  watched: string[];
+};
+
+const EMPTY_RANKS: RankAccount[] = [];
+let ranksCache = "";
+let ranksValue: RankAccount[] = EMPTY_RANKS;
+
+function getRanksSnapshot() {
+  const raw = localStorage.getItem(STORAGE_KEY) ?? "";
+  if (raw === ranksCache) return ranksValue;
+  ranksCache = raw;
+  const store = readStore();
+  ranksValue = Object.values(store.users).map((user) => ({
+    name: user.name,
+    watched: listOf(user.watched),
+  }));
+  return ranksValue;
+}
+
+export function useRankAccounts() {
+  return useSyncExternalStore(subscribe, getRanksSnapshot, () => EMPTY_RANKS);
+}
+
 export function useWatched() {
   const context = useContext(WatchedContext);
   if (!context) {

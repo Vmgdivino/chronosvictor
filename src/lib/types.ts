@@ -1,3 +1,11 @@
+export type Soundtrack = {
+  title: string;
+  artist: string;
+  youtubeId: string;
+};
+
+export type MediaKind = "movie" | "series";
+
 export type Movie = {
   id: string;
   title: string;
@@ -9,6 +17,14 @@ export type Movie = {
   chapter: string;
   tags: string[];
   note?: string;
+  kind: MediaKind;
+  episodes?: number;
+  soundtrack: Soundtrack;
+};
+
+export type MovieSource = Omit<Movie, "soundtrack" | "kind" | "episodes"> & {
+  kind?: MediaKind;
+  episodes?: number;
 };
 
 export type Franchise = {
@@ -21,6 +37,10 @@ export type Franchise = {
   backdrop: string;
   orderNote: string;
   movies: Movie[];
+};
+
+export type FranchiseSource = Omit<Franchise, "movies"> & {
+  movies: MovieSource[];
 };
 
 export type WatchFilter = "all" | "watching" | "watched" | "pending";

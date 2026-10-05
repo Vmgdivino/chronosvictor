@@ -4,6 +4,7 @@ import { catalogProgress } from "@/lib/progress";
 import { franchises } from "@/lib/franchises";
 import { useWatched } from "@/context/watched-context";
 import { syncRememberedPassword } from "@/lib/remember";
+import { VolumeControl } from "@/components/volume-control";
 import { Clapperboard, LogOut } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -12,6 +13,7 @@ import { useState, type FormEvent } from "react";
 const links = [
   { href: "/", label: "Franquias" },
   { href: "/conquistas", label: "Conquistas" },
+  { href: "/ranking", label: "Ranking" },
 ];
 
 export function SiteHeader() {
@@ -41,9 +43,10 @@ export function SiteHeader() {
         <div className="flex min-w-0 items-center gap-1.5 sm:gap-3">
           {ready ? (
             <p className="hidden text-xs text-muted lg:block">
-              <span className="text-foreground">{catalog.done}</span> de {catalog.total} filmes
+              <span className="text-foreground">{catalog.done}</span> de {catalog.total} títulos
             </p>
           ) : null}
+          <VolumeControl />
           <nav className="flex h-11 shrink-0 items-center rounded-full border border-white/10 bg-white/5 p-1 text-xs sm:text-sm">
             {links.map((link) => {
               const active = pathname === link.href;

@@ -92,7 +92,7 @@ export function HomeView() {
           </p>
         </div>
         <div className="grid grid-cols-3 gap-3">
-          <Stat icon={<Clapperboard className="h-4 w-4" />} label="Filmes" value={ready ? `${catalog.done}/${catalog.total}` : "—"} />
+          <Stat icon={<Clapperboard className="h-4 w-4" />} label="Títulos" value={ready ? `${catalog.done}/${catalog.total}` : "—"} />
           <Stat icon={<Timer className="h-4 w-4" />} label="Horas vistas" value={ready ? formatHours(catalog.minutes) : "—"} />
           <Stat icon={<Award className="h-4 w-4" />} label="Sagas fechadas" value={ready ? String(catalog.completed) : "—"} />
         </div>
@@ -125,7 +125,7 @@ export function HomeView() {
             <div className="mt-6 max-w-md">
               <div className="mb-2 flex items-center justify-between text-sm">
                 <span>
-                  {ready ? `${featured.progress.done}/${featured.progress.total} filmes` : "Carregando progresso"}
+                  {ready ? `${featured.progress.done}/${featured.progress.total} títulos` : "Carregando progresso"}
                 </span>
                 <span>{ready ? `${featured.progress.percent}%` : ""}</span>
               </div>
@@ -165,12 +165,12 @@ export function HomeView() {
                 <span className="absolute inset-x-0 top-0 h-1" style={{ background: franchise.accent }} />
                 <div className="relative flex min-h-[280px] flex-col justify-end p-5">
                   <p className="text-[11px] font-medium uppercase tracking-[0.22em]" style={{ color: franchise.accent }}>
-                    {franchise.movies.length} filmes
+                    {franchise.movies.length} títulos
                   </p>
                   <h3 className="mt-1 font-display text-3xl leading-none">{franchise.name}</h3>
                   {ready && onScreen > 0 ? (
                     <p className="mt-2 text-xs font-medium uppercase tracking-[0.16em] text-gold">
-                      {onScreen} {onScreen === 1 ? "filme na tela" : "filmes na tela"}
+                      {onScreen} na tela
                     </p>
                   ) : null}
                   <p className="mt-2 line-clamp-2 text-sm text-white/70">{franchise.tagline}</p>
