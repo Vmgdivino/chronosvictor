@@ -254,7 +254,7 @@ export const extraFranchises: Franchise[] = [
     name: "Jurassic",
     tagline: "Da ilha de Hammond ao mundo em que os dinossauros já não cabem na cerca.",
     description:
-      "A cronologia Jurassic segue a estreia porque a história também segue: o parque, a queda, e o mundo que herdou os animais. Rebirth entra no fim da linha.",
+      "A cronologia Jurassic segue a estreia porque a história também segue: o parque, a queda, e o mundo que herdou os animais. Renascimento fecha a linha.",
     accent: "#f0b429",
     glow: "rgba(120, 72, 8, 0.72)",
     backdrop: backdrop("tt0107290"),
@@ -320,7 +320,7 @@ export const extraFranchises: Franchise[] = [
         "Jurassic World: Domínio",
         2022,
         147,
-        "Dinossauros já vivem entre cidades. Uma gafanhoto de laboratório e o passado de Biosyn puxam todos para o mesmo vale.",
+        "Dinossauros já vivem entre cidades. Um gafanhoto de laboratório e o passado da Biosyn puxam todos para o mesmo vale.",
         "tt8041270",
         "2022",
         "O mundo",
@@ -328,7 +328,7 @@ export const extraFranchises: Franchise[] = [
       ),
       film(
         "jw-4",
-        "Jurassic World: Recomeço",
+        "Jurassic World: Renascimento",
         2025,
         133,
         "Uma equipe volta a uma ilha equatorial atrás de material genético que ainda pode valer mais do que a cerca que um dia existiu.",

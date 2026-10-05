@@ -116,7 +116,7 @@ export function AchievementsView() {
       <button
         type="button"
         onClick={() => {
-          if (window.confirm("Apagar os filmes marcados como assistidos nesta conta?")) {
+          if (window.confirm("Apagar o progresso desta conta, incluindo o que você já assistiu e o que começou a assistir?")) {
             clear();
           }
         }}

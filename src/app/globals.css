@@ -45,3 +45,71 @@ body {
   scrollbar-width: thin;
   scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
 }
+
+.cinema-stage {
+  perspective: 1400px;
+  transform-style: preserve-3d;
+}
+
+.cinema-scene {
+  position: absolute;
+  inset: 0;
+  height: 100%;
+  width: 100%;
+  object-fit: cover;
+  transform-origin: center center;
+  animation: scene-in 1.1s ease, scene-drift 36s ease-in-out infinite;
+}
+
+.cinema-scene-rush {
+  animation: scene-in 1.1s ease, scene-rush 18s ease-in-out infinite alternate;
+}
+
+.cinema-scene-warp {
+  animation: scene-in 1.1s ease, scene-warp 24s ease-in-out infinite;
+}
+
+.cinema-scene-orbit {
+  animation: scene-in 1.1s ease, scene-orbit 32s ease-in-out infinite;
+}
+
+.cinema-shade {
+  background:
+    linear-gradient(90deg, rgba(7, 8, 12, 0.82) 0%, rgba(7, 8, 12, 0.42) 46%, rgba(7, 8, 12, 0.55) 100%),
+    radial-gradient(ellipse at center, rgba(7, 8, 12, 0.12) 0%, rgba(7, 8, 12, 0.55) 72%, #07080c 100%);
+}
+
+@keyframes scene-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes scene-drift {
+  0%, 100% { transform: scale(1.16) translate3d(-1.5%, 0, 0) rotateY(-8deg) rotateX(4deg); }
+  50% { transform: scale(1.24) translate3d(1.6%, -1%, 40px) rotateY(8deg) rotateX(-3deg); }
+}
+
+@keyframes scene-rush {
+  from { transform: scale(1.22) translate3d(-5%, 0, 0) rotateY(-11deg); }
+  to { transform: scale(1.22) translate3d(5%, 0, 20px) rotateY(10deg); }
+}
+
+@keyframes scene-warp {
+  0%, 100% { transform: scale(1.08) translateZ(0); }
+  50% { transform: scale(1.4) translateZ(90px); }
+}
+
+@keyframes scene-orbit {
+  0%, 100% { transform: scale(1.16) rotateY(-10deg) rotateX(5deg); }
+  50% { transform: scale(1.22) rotateY(10deg) rotateX(-4deg) translate3d(0, -1%, 36px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cinema-scene,
+  .cinema-scene-rush,
+  .cinema-scene-warp,
+  .cinema-scene-orbit {
+    animation: none;
+    transform: scale(1.08);
+  }
+}

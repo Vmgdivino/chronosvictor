@@ -2,16 +2,37 @@
 
 import { Poster } from "@/components/poster";
 import { ProgressBar } from "@/components/progress-bar";
+import { useScene } from "@/context/scene-context";
 import { useWatched } from "@/context/watched-context";
+import { categories, franchisesIn, type CategoryId } from "@/lib/categories";
 import { franchises } from "@/lib/franchises";
 import { formatHours } from "@/lib/format";
 import { catalogProgress, franchiseProgress, getAchievements } from "@/lib/progress";
+import { motionFor } from "@/lib/scene";
 import { Award, Clapperboard, Sparkles, Timer } from "lucide-react";
 import Link from "next/link";
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
 export function HomeView() {
-  const { watched, ready } = useWatched();
+  const { watched, watching, ready } = useWatched();
+  const { setPreview } = useScene();
+  const [category, setCategory] = useState<CategoryId>("todas");
+  const listed = franchisesIn(category);
+  const categoryLabel = categories.find((item) => item.id === category)?.label ?? "Todas";
+
+  useEffect(() => {
+    if (category === "todas") {
+      setPreview(null);
+      return;
+    }
+    const pick = franchisesIn(category)[0];
+    if (!pick) {
+      setPreview(null);
+      return;
+    }
+    setPreview({ image: pick.backdrop, accent: pick.accent, motion: motionFor(pick.slug) });
+    return () => setPreview(null);
+  }, [category, setPreview]);
   const catalog = catalogProgress(franchises, watched);
   const achievements = getAchievements(watched);
   const seniorUnlocked = achievements.filter((item) => item.tier === "senior" && item.unlocked).length;
@@ -20,7 +41,7 @@ export function HomeView() {
   const proTotal = achievements.filter((item) => item.tier === "professional").length;
 
   const featured =
-    franchises
+    listed
       .map((franchise) => ({ franchise, progress: franchiseProgress(franchise, watched) }))
       .sort((a, b) => {
         const score = (item: typeof a) => {
@@ -34,6 +55,30 @@ export function HomeView() {
 
   return (
     <div className="space-y-12">
+      <div className="sticky top-16 z-30 -mx-4 border-b border-white/10 bg-[#08090d]/80 px-4 py-3 backdrop-blur-xl sm:-mx-6 sm:px-6">
+        <div className="flex gap-2 overflow-x-auto" role="tablist" aria-label="Categorias">
+          {categories.map((item) => {
+            const active = category === item.id;
+            const count = franchisesIn(item.id).length;
+            return (
+              <button
+                key={item.id}
+                type="button"
+                role="tab"
+                aria-selected={active}
+                onClick={() => setCategory(item.id)}
+                className={`shrink-0 rounded-full px-4 py-2 text-sm font-medium transition ${
+                  active ? "bg-gold text-black" : "border border-white/10 bg-white/5 text-white/75 hover:border-white/25 hover:text-white"
+                }`}
+              >
+                {item.label}
+                <span className={`ml-2 text-xs ${active ? "text-black/55" : "text-white/40"}`}>{count}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
       <section className="grid gap-8 lg:grid-cols-[1.15fr_0.85fr] lg:items-end">
         <div>
           <p className="text-xs font-medium uppercase tracking-[0.32em] text-gold">Em sessão</p>
@@ -94,12 +139,17 @@ export function HomeView() {
         <div className="mb-5 flex items-end justify-between gap-4">
           <div>
             <h2 className="font-display text-3xl">Franquias</h2>
-            <p className="mt-1 text-sm text-muted">{franchises.length} cronologias prontas para maratonar.</p>
+            <p className="mt-1 text-sm text-muted">
+              {category === "todas"
+                ? `${franchises.length} cronologias prontas para maratonar.`
+                : `${listed.length} ${listed.length === 1 ? "cronologia" : "cronologias"} em ${categoryLabel}.`}
+            </p>
           </div>
         </div>
         <div className="grid gap-5 sm:grid-cols-2">
-          {franchises.map((franchise) => {
+          {listed.map((franchise) => {
             const progress = franchiseProgress(franchise, watched);
+            const onScreen = franchise.movies.filter((movie) => watching.has(movie.id)).length;
             return (
               <Link
                 key={franchise.slug}
@@ -118,6 +168,11 @@ export function HomeView() {
                     {franchise.movies.length} filmes
                   </p>
                   <h3 className="mt-1 font-display text-3xl leading-none">{franchise.name}</h3>
+                  {ready && onScreen > 0 ? (
+                    <p className="mt-2 text-xs font-medium uppercase tracking-[0.16em] text-gold">
+                      {onScreen} {onScreen === 1 ? "filme na tela" : "filmes na tela"}
+                    </p>
+                  ) : null}
                   <p className="mt-2 line-clamp-2 text-sm text-white/70">{franchise.tagline}</p>
                   <div className="mt-4">
                     <div className="mb-2 flex justify-between text-xs text-white/80">

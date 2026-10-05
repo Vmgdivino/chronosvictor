@@ -7,14 +7,15 @@ import { formatRuntime } from "@/lib/format";
 import { getFranchise } from "@/lib/franchises";
 import { franchiseProgress } from "@/lib/progress";
 import type { WatchFilter } from "@/lib/types";
-import { ArrowLeft, Check } from "lucide-react";
+import { ArrowLeft, Check, Play } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 
 const filters: { id: WatchFilter; label: string }[] = [
   { id: "all", label: "Todos" },
+  { id: "watching", label: "Assistindo" },
   { id: "watched", label: "Assistidos" },
-  { id: "pending", label: "Falta assistir" },
+  { id: "pending", label: "Por assistir" },
 ];
 
 const spotlights: Record<string, string> = {
@@ -26,6 +27,19 @@ const spotlights: Record<string, string> = {
   "terra-media": "lotr-1",
   jurassic: "jp-1",
   "indiana-jones": "indy-raiders",
+  "missao-impossivel": "mi-6",
+  "john-wick": "wick-1",
+  "007-craig": "bond-skyfall",
+  matrix: "mx-1",
+  "planeta-dos-macacos": "apes-1",
+  piratas: "potc-1",
+  "mad-max": "max-fury",
+  "jogos-vorazes": "hg-1",
+  monsterverse: "mv-godzilla",
+  duna: "dune-1",
+  avatar: "av-1",
+  "batman-nolan": "bm-2",
+  alien: "al-1",
 };
 
 function inkFor(accent: string) {
@@ -34,7 +48,7 @@ function inkFor(accent: string) {
 
 export function FranchiseView({ slug }: { slug: string }) {
   const franchise = getFranchise(slug);
-  const { ready, watched, toggle } = useWatched();
+  const { ready, watched, watching, toggle, toggleWatching } = useWatched();
   const [filter, setFilter] = useState<WatchFilter>("all");
 
   if (!franchise) return null;
@@ -43,8 +57,11 @@ export function FranchiseView({ slug }: { slug: string }) {
   const ink = inkFor(franchise.accent);
   const spotlight =
     franchise.movies.find((movie) => movie.id === spotlights[franchise.slug]) ?? franchise.movies[0];
+  const watchingCount = franchise.movies.filter((movie) => watching.has(movie.id)).length;
   const visible = franchise.movies.filter((movie) => {
     const seen = watched.has(movie.id);
+    const started = watching.has(movie.id);
+    if (filter === "watching") return started;
     if (filter === "watched") return seen;
     if (filter === "pending") return !seen;
     return true;
@@ -103,7 +120,13 @@ export function FranchiseView({ slug }: { slug: string }) {
         <div className="flex flex-wrap gap-2" role="tablist" aria-label="Filtrar cronologia">
           {filters.map((item) => {
             const count =
-              item.id === "watched" ? progress.done : item.id === "pending" ? progress.total - progress.done : progress.total;
+              item.id === "watched"
+                ? progress.done
+                : item.id === "watching"
+                  ? watchingCount
+                  : item.id === "pending"
+                    ? progress.total - progress.done
+                    : progress.total;
             const active = filter === item.id;
             return (
               <button
@@ -126,15 +149,17 @@ export function FranchiseView({ slug }: { slug: string }) {
           })}
         </div>
         <p className="text-sm text-muted">
-          {visible.length} {visible.length === 1 ? "filme nesta vista" : "filmes nesta vista"}
+          {visible.length} {visible.length === 1 ? "filme nesta lista" : "filmes nesta lista"}
         </p>
       </div>
 
       {visible.length === 0 ? (
         <p className="rounded-2xl border border-dashed border-white/15 px-4 py-10 text-center text-sm text-muted">
-          {filter === "watched"
-            ? "Nenhum filme marcado ainda. A cronologia inteira continua à sua espera."
-            : "Você já assistiu a todos os filmes deste filtro."}
+          {filter === "watching"
+            ? "Nenhum filme em andamento. Use Comecei a assistir quando a sessão começar."
+            : filter === "watched"
+              ? "Nenhum filme marcado ainda. A cronologia inteira continua à sua espera."
+              : "Você já assistiu a todos os filmes deste filtro."}
         </p>
       ) : (
         <div className="relative">
@@ -143,6 +168,7 @@ export function FranchiseView({ slug }: { slug: string }) {
           {visible.map((movie, listIndex) => {
             const index = franchise.movies.findIndex((item) => item.id === movie.id);
             const seen = watched.has(movie.id);
+            const started = watching.has(movie.id);
             const showChapter = listIndex === 0 || movie.chapter !== visible[listIndex - 1]?.chapter;
             return (
               <li key={movie.id} className="relative">
@@ -169,7 +195,7 @@ export function FranchiseView({ slug }: { slug: string }) {
                   </div>
                   <article
                     className={`rounded-2xl border bg-white/[0.03] p-3 transition duration-300 hover:-translate-y-0.5 hover:bg-white/[0.05] sm:p-4 ${
-                      seen ? "border-white/5" : "border-white/10"
+                      started ? "border-gold/40 shadow-[0_0_32px_rgba(231,195,106,0.08)]" : seen ? "border-white/5" : "border-white/10"
                     }`}
                   >
                     <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
@@ -178,7 +204,12 @@ export function FranchiseView({ slug }: { slug: string }) {
                         {seen ? (
                           <span className="absolute left-1.5 top-1.5 inline-flex items-center gap-1 rounded-full bg-emerald-400 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-black">
                             <Check className="h-3 w-3" />
-                            Visto
+                            Assistido
+                          </span>
+                        ) : started ? (
+                          <span className="absolute left-1.5 top-1.5 inline-flex items-center gap-1 rounded-full bg-gold px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-black">
+                            <Play className="h-3 w-3 fill-current" />
+                            Na tela
                           </span>
                         ) : null}
                       </div>
@@ -195,26 +226,49 @@ export function FranchiseView({ slug }: { slug: string }) {
                         <p className="mt-2 text-sm leading-relaxed text-white/70">{movie.synopsis}</p>
                         {movie.note ? <p className="mt-2 text-xs italic text-gold/90">{movie.note}</p> : null}
                       </div>
-                      <button
-                        type="button"
-                        aria-pressed={seen}
-                        onClick={() => toggle(movie.id)}
-                        className={`inline-flex shrink-0 items-center justify-center gap-2 rounded-full px-4 py-2.5 text-sm font-medium transition active:scale-95 ${
-                          seen
-                            ? "bg-emerald-400/15 text-emerald-300 ring-1 ring-emerald-400/40"
-                            : "bg-white text-black hover:bg-white/90"
-                        }`}
-                      >
-                        <span
-                          className={`grid h-4 w-4 place-items-center rounded-[4px] border ${
-                            seen ? "border-emerald-300 bg-emerald-400 text-black" : "border-black/30"
-                          }`}
-                          aria-hidden
+                      <div className="flex w-full shrink-0 flex-col gap-2 sm:w-56">
+                        <button
+                          type="button"
+                          aria-pressed={started}
+                          disabled={seen}
+                          onClick={() => toggleWatching(movie.id)}
+                          className={`inline-flex items-center justify-center gap-2 rounded-full px-4 py-2.5 text-sm font-medium transition active:scale-[0.98] ${
+                            started
+                              ? "bg-gold text-black shadow-[0_0_24px_rgba(231,195,106,0.35)]"
+                              : "border border-white/15 bg-white/5 text-white/85 hover:border-gold/60 hover:text-white"
+                          } ${seen ? "cursor-default opacity-35" : ""}`}
                         >
-                          {seen ? <Check className="h-3 w-3" /> : null}
-                        </span>
-                        {seen ? "Assistido" : "Marcar assistido"}
-                      </button>
+                          <span
+                            className={`grid h-5 w-5 place-items-center rounded-full ${
+                              started ? "bg-black/15" : "bg-gold/15 text-gold"
+                            }`}
+                            aria-hidden
+                          >
+                            <Play className={`h-3 w-3 ${started ? "fill-black" : "fill-gold"}`} />
+                          </span>
+                          {started ? "Assistindo" : "Comecei a assistir"}
+                        </button>
+                        <button
+                          type="button"
+                          aria-pressed={seen}
+                          onClick={() => toggle(movie.id)}
+                          className={`inline-flex items-center justify-center gap-2 rounded-full px-4 py-2.5 text-sm font-medium transition active:scale-[0.98] ${
+                            seen
+                              ? "bg-emerald-400/15 text-emerald-300 ring-1 ring-emerald-400/40"
+                              : "bg-white text-black hover:bg-white/90"
+                          }`}
+                        >
+                          <span
+                            className={`grid h-4 w-4 place-items-center rounded-[4px] border ${
+                              seen ? "border-emerald-300 bg-emerald-400 text-black" : "border-black/30"
+                            }`}
+                            aria-hidden
+                          >
+                            {seen ? <Check className="h-3 w-3" /> : null}
+                          </span>
+                          {seen ? "Assistido" : "Marcar como assistido"}
+                        </button>
+                      </div>
                     </div>
                   </article>
                 </div>

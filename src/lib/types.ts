@@ -23,7 +23,7 @@ export type Franchise = {
   movies: Movie[];
 };
 
-export type WatchFilter = "all" | "watched" | "pending";
+export type WatchFilter = "all" | "watching" | "watched" | "pending";
 
 export type AchievementTier = "senior" | "professional";
 

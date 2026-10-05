@@ -11,13 +11,19 @@ import {
 
 const STORAGE_KEY = "chronosvictor.accounts.v1";
 const CHANGE_EVENT = "chronosvictor-accounts";
-const SERVER_SNAPSHOT = JSON.stringify({ booted: false, session: null, watched: [] as string[] });
+const SERVER_SNAPSHOT = JSON.stringify({
+  booted: false,
+  session: null,
+  watched: [] as string[],
+  watching: [] as string[],
+});
 
 type UserRecord = {
   name: string;
   salt: string;
   hash: string;
   watched: string[];
+  watching: string[];
 };
 
 type AccountStore = {
@@ -31,8 +37,11 @@ type WatchedContextValue = {
   ready: boolean;
   user: string | null;
   watched: Set<string>;
+  watching: Set<string>;
   isWatched: (id: string) => boolean;
+  isWatching: (id: string) => boolean;
   toggle: (id: string) => void;
+  toggleWatching: (id: string) => void;
   clear: () => void;
   login: (username: string, password: string) => Promise<AuthResult>;
   register: (username: string, password: string) => Promise<AuthResult>;
@@ -74,9 +83,18 @@ function writeStore(store: AccountStore) {
   window.dispatchEvent(new Event(CHANGE_EVENT));
 }
 
+function listOf(value: unknown) {
+  return Array.isArray(value) ? value.filter((item) => typeof item === "string") : [];
+}
+
 function snapshotOf(store: AccountStore) {
-  const watched = store.session ? (store.users[store.session]?.watched ?? []) : [];
-  return JSON.stringify({ booted: true, session: store.session, watched });
+  const user = store.session ? store.users[store.session] : undefined;
+  return JSON.stringify({
+    booted: true,
+    session: store.session,
+    watched: listOf(user?.watched),
+    watching: listOf(user?.watching),
+  });
 }
 
 function getClientSnapshot() {
@@ -124,11 +142,17 @@ function validate(username: string, password: string): AuthResult | null {
 export function WatchedProvider({ children }: { children: ReactNode }) {
   const raw = useSyncExternalStore(subscribe, getClientSnapshot, getServerSnapshot);
   const snapshot = useMemo(() => {
-    const parsed = JSON.parse(raw) as { booted: boolean; session: string | null; watched: string[] };
+    const parsed = JSON.parse(raw) as {
+      booted: boolean;
+      session: string | null;
+      watched: string[];
+      watching?: string[];
+    };
     return {
       booted: parsed.booted,
       session: parsed.session,
-      watched: new Set(parsed.watched.filter((id) => typeof id === "string")),
+      watched: new Set(listOf(parsed.watched)),
+      watching: new Set(listOf(parsed.watching)),
     };
   }, [raw]);
 
@@ -159,6 +183,7 @@ export function WatchedProvider({ children }: { children: ReactNode }) {
       salt,
       hash,
       watched: [],
+      watching: [],
     };
     store.session = key;
     writeStore(store);
@@ -176,9 +201,31 @@ export function WatchedProvider({ children }: { children: ReactNode }) {
     if (!store.session) return;
     const user = store.users[store.session];
     if (!user) return;
-    user.watched = user.watched.includes(id)
-      ? user.watched.filter((item) => item !== id)
-      : [...user.watched, id];
+    const watching = listOf(user.watching);
+    if (listOf(user.watched).includes(id)) {
+      user.watched = listOf(user.watched).filter((item) => item !== id);
+      user.watching = watching;
+    } else {
+      user.watched = [...listOf(user.watched), id];
+      user.watching = watching.filter((item) => item !== id);
+    }
+    writeStore(store);
+  }, []);
+
+  const toggleWatching = useCallback((id: string) => {
+    const store = readStore();
+    if (!store.session) return;
+    const user = store.users[store.session];
+    if (!user) return;
+    const watching = listOf(user.watching);
+    user.watched = listOf(user.watched);
+    if (watching.includes(id)) {
+      user.watching = watching.filter((item) => item !== id);
+    } else if (!user.watched.includes(id)) {
+      user.watching = [...watching, id];
+    } else {
+      return;
+    }
     writeStore(store);
   }, []);
 
@@ -188,6 +235,7 @@ export function WatchedProvider({ children }: { children: ReactNode }) {
     const user = store.users[store.session];
     if (!user) return;
     user.watched = [];
+    user.watching = [];
     writeStore(store);
   }, []);
 
@@ -198,14 +246,17 @@ export function WatchedProvider({ children }: { children: ReactNode }) {
       ready: snapshot.booted,
       user: displayName,
       watched: snapshot.watched,
+      watching: snapshot.watching,
       isWatched: (id: string) => snapshot.watched.has(id),
+      isWatching: (id: string) => snapshot.watching.has(id),
       toggle,
+      toggleWatching,
       clear,
       login,
       register,
       logout,
     };
-  }, [snapshot, toggle, clear, login, register, logout]);
+  }, [snapshot, toggle, toggleWatching, clear, login, register, logout]);
 
   return <WatchedContext.Provider value={value}>{children}</WatchedContext.Provider>;
 }
