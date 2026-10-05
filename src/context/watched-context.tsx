@@ -45,6 +45,7 @@ type WatchedContextValue = {
   clear: () => void;
   login: (username: string, password: string) => Promise<AuthResult>;
   register: (username: string, password: string) => Promise<AuthResult>;
+  changePassword: (username: string, password: string) => Promise<AuthResult>;
   logout: () => void;
 };
 
@@ -190,6 +191,20 @@ export function WatchedProvider({ children }: { children: ReactNode }) {
     return { ok: true };
   }, []);
 
+  const changePassword = useCallback(async (username: string, password: string): Promise<AuthResult> => {
+    const invalid = validate(username, password);
+    if (invalid) return invalid;
+    const key = accountKey(username);
+    const store = readStore();
+    const user = store.users[key];
+    if (!user) return { ok: false, message: "Não há sessão com esse nome. Crie uma conta." };
+    const salt = createSalt();
+    user.salt = salt;
+    user.hash = await hashPassword(password, salt);
+    writeStore(store);
+    return { ok: true };
+  }, []);
+
   const logout = useCallback(() => {
     const store = readStore();
     store.session = null;
@@ -254,9 +269,10 @@ export function WatchedProvider({ children }: { children: ReactNode }) {
       clear,
       login,
       register,
+      changePassword,
       logout,
     };
-  }, [snapshot, toggle, toggleWatching, clear, login, register, logout]);
+  }, [snapshot, toggle, toggleWatching, clear, login, register, changePassword, logout]);
 
   return <WatchedContext.Provider value={value}>{children}</WatchedContext.Provider>;
 }
