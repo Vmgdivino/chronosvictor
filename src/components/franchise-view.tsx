@@ -2,15 +2,16 @@
 
 import { Poster } from "@/components/poster";
 import { ProgressBar } from "@/components/progress-bar";
+import { TrailerDialog } from "@/components/trailer-dialog";
 import { playMovie } from "@/context/sound-context";
 import { useWatched } from "@/context/watched-context";
 import { formatRuntime } from "@/lib/format";
 import { getFranchise } from "@/lib/franchises";
 import { franchiseProgress } from "@/lib/progress";
 import type { WatchFilter } from "@/lib/types";
-import { ArrowLeft, Check, Play } from "lucide-react";
+import { ArrowLeft, Check, Clapperboard, Play } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 
 const filters: { id: WatchFilter; label: string }[] = [
   { id: "all", label: "Todos" },
@@ -51,6 +52,8 @@ export function FranchiseView({ slug }: { slug: string }) {
   const franchise = getFranchise(slug);
   const { ready, watched, watching, toggle, toggleWatching } = useWatched();
   const [filter, setFilter] = useState<WatchFilter>("all");
+  const [trailer, setTrailer] = useState<{ title: string; youtubeId: string } | null>(null);
+  const closeTrailer = useCallback(() => setTrailer(null), []);
 
   if (!franchise) return null;
 
@@ -248,6 +251,16 @@ export function FranchiseView({ slug }: { slug: string }) {
                       </div>
                       </div>
                       <div className="flex w-full shrink-0 flex-col gap-2 sm:w-56">
+                        {movie.trailerId ? (
+                          <button
+                            type="button"
+                            onClick={() => setTrailer({ title: movie.title, youtubeId: movie.trailerId })}
+                            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 py-2.5 text-sm font-medium text-white transition hover:border-white/40 active:scale-[0.98]"
+                          >
+                            <Clapperboard className="h-4 w-4" />
+                            Trailer
+                          </button>
+                        ) : null}
                         <button
                           type="button"
                           aria-pressed={started}
@@ -299,6 +312,9 @@ export function FranchiseView({ slug }: { slug: string }) {
           </ol>
         </div>
       )}
+      {trailer ? (
+        <TrailerDialog title={trailer.title} youtubeId={trailer.youtubeId} onClose={closeTrailer} />
+      ) : null}
     </div>
   );
 }

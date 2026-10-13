@@ -1,6 +1,7 @@
 import { extraFranchises } from "@/lib/extra-franchises";
 import { moreFranchises } from "@/lib/more-franchises";
 import { soundtracks } from "@/lib/soundtracks";
+import { trailers } from "@/lib/trailers";
 import { timelineInserts } from "@/lib/timeline-inserts";
 import type { Franchise, FranchiseSource } from "@/lib/types";
 
@@ -900,7 +901,7 @@ export const franchises: Franchise[] = franchiseSources.map((source) => {
     movies: placed.movies.map((movie) => {
       const soundtrack = soundtracks[movie.id];
       if (!soundtrack) throw new Error(`Trilha em falta para ${movie.id}`);
-      return { ...movie, kind: movie.kind ?? "movie", soundtrack };
+      return { ...movie, kind: movie.kind ?? "movie", soundtrack, trailerId: trailers[movie.id] ?? "" };
     }),
   };
 });

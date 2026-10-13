@@ -78,6 +78,7 @@ let player: YTPlayer | null = null;
 let playerFrame: HTMLIFrameElement | null = null;
 let mounting = false;
 let hushToken = 0;
+let trailerOpen = false;
 let loadedId = "";
 let loadToken = 0;
 let activeToken = 0;
@@ -127,6 +128,7 @@ function shuffleTracks(tracks: AudioTrack[], first?: AudioTrack) {
 
 function youtubeFrames() {
   return [...document.querySelectorAll("iframe")].filter((frame) => {
+    if (frame.getAttribute("data-trailer") === "1") return false;
     const src = `${frame.getAttribute("src") || ""} ${frame.getAttribute("data-src") || ""}`;
     return src.includes("youtube") || src.includes("youtu.be");
   });
@@ -185,9 +187,9 @@ function apply() {
     loadedAt = Date.now();
     armed = true;
     player.stopVideo?.();
-    if (state.playing && !silent) player.loadVideoById(track.soundtrack.youtubeId);
+    if (state.playing && !silent && !trailerOpen) player.loadVideoById(track.soundtrack.youtubeId);
     else player.cueVideoById(track.soundtrack.youtubeId);
-  } else if (state.playing && !silent) {
+  } else if (state.playing && !silent && !trailerOpen) {
     player.playVideo();
   } else {
     player.pauseVideo();
@@ -201,7 +203,7 @@ function apply() {
   player.setVolume(state.volume);
   commandFrames("unMute");
   commandFrames("setVolume", [state.volume]);
-  if (!state.playing) return;
+  if (!state.playing || trailerOpen) return;
   const attempt = ++playAttempt;
   window.setTimeout(() => {
     if (attempt !== playAttempt || !state.playing) return;
@@ -363,6 +365,13 @@ function advance(manual: boolean) {
 
 export function playNext() {
   advance(true);
+}
+
+export function setTrailerOpen(open: boolean) {
+  trailerOpen = open;
+  if (!player) return;
+  if (open) player.pauseVideo();
+  else apply();
 }
 
 export function bindPlayer(instance: YTPlayer) {

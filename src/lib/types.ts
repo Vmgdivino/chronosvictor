@@ -20,6 +20,7 @@ export type Movie = {
   kind: MediaKind;
   episodes?: number;
   soundtrack: Soundtrack;
+  trailerId: string;
 };
 
 export type MovieSource = Omit<Movie, "soundtrack" | "kind" | "episodes"> & {
