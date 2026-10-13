@@ -5,7 +5,7 @@ import { franchises } from "@/lib/franchises";
 import { useWatched } from "@/context/watched-context";
 import { syncRememberedPassword } from "@/lib/remember";
 import { VolumeControl } from "@/components/volume-control";
-import { Clapperboard, LogOut } from "lucide-react";
+import { LogOut } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, type FormEvent } from "react";
@@ -31,9 +31,13 @@ export function SiteHeader() {
     <header className="sticky top-0 z-40 border-b border-white/10 bg-[#08090d]/75 backdrop-blur-xl">
       <div className="mx-auto flex h-14 w-full max-w-6xl items-center justify-between gap-2 px-3 sm:h-16 sm:gap-4 sm:px-6">
         <Link href="/" className="flex min-w-0 items-center gap-2">
-          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-gold/40 bg-gold/10 text-gold">
-            <Clapperboard className="h-4 w-4" aria-hidden />
-          </span>
+          <img
+            src="/brand-logo.jpg"
+            alt=""
+            width={640}
+            height={349}
+            className="h-9 w-auto max-w-[4.6rem] shrink-0 rounded-md object-contain sm:h-10 sm:max-w-[5.2rem]"
+          />
           <span className="truncate font-display text-base leading-none tracking-tight sm:text-lg">
             <span className="hidden min-[420px]:inline">Chronos</span>
             <span className="text-gold">Victor</span>
