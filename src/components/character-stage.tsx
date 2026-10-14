@@ -7,6 +7,7 @@ import { useEffect, useRef, useState } from "react";
 
 const VIEWER_SCRIPT = "/vendor/model-viewer.min.js";
 const WELCOME_KEY = "chronosvictor.cast.greeting";
+const PLACE_KEY = "chronosvictor.cast.place";
 const EAR_KEY = "chronosvictor.cast.ear";
 const EAR_SCRIPT = "https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2";
 
@@ -70,6 +71,30 @@ function clipNamed(names: string[], words: string[]) {
     if (hit) return hit;
   }
   return undefined;
+}
+
+type Place = { x: number; y: number };
+
+function readPlace(): Place | null {
+  try {
+    const raw = localStorage.getItem(PLACE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<Place>;
+    if (typeof parsed.x === "number" && typeof parsed.y === "number") return { x: parsed.x, y: parsed.y };
+  } catch {
+    /* sessão privada */
+  }
+  return null;
+}
+
+function clampPlace(x: number, y: number, width: number, height: number): Place {
+  const margin = 8;
+  const maxX = Math.max(margin, window.innerWidth - width - margin);
+  const maxY = Math.max(margin, window.innerHeight - height - margin);
+  return {
+    x: Math.min(maxX, Math.max(margin, x)),
+    y: Math.min(maxY, Math.max(margin, y)),
+  };
 }
 
 function greeting(name: string) {
@@ -306,7 +331,9 @@ function recognition() {
 export function CharacterStage() {
   const { cast } = useScene();
   const { user } = useWatched();
+  const stageRef = useRef<HTMLElement>(null);
   const hostRef = useRef<HTMLDivElement>(null);
+  const dragRef = useRef<{ dx: number; dy: number; handle: HTMLElement } | null>(null);
   const viewerRef = useRef<LiveViewer | null>(null);
   const hearRef = useRef<SpeechListener | null>(null);
   const turnsRef = useRef<Turn[]>([]);
@@ -331,7 +358,38 @@ export function CharacterStage() {
   const [micReady, setMicReady] = useState(false);
   const [hearing, setHearing] = useState(false);
   const [motion, setMotion] = useState<"run" | "walk" | "idle">("run");
+  const [place, setPlace] = useState<Place | null>(null);
+  const [dragging, setDragging] = useState(false);
   const figure: Figure = cast ? figureFor(cast.slug, cast.movieId) : figures.adventurer;
+
+  useEffect(() => {
+    const stage = stageRef.current;
+    const saved = readPlace();
+    if (!stage || !saved) return;
+    const rect = stage.getBoundingClientRect();
+    setPlace(clampPlace(saved.x, saved.y, rect.width, rect.height));
+  }, []);
+
+  useEffect(() => {
+    const fit = () => {
+      const stage = stageRef.current;
+      if (!stage) return;
+      setPlace((current) => {
+        if (!current) return current;
+        const rect = stage.getBoundingClientRect();
+        const next = clampPlace(current.x, current.y, rect.width, rect.height);
+        if (next.x === current.x && next.y === current.y) return current;
+        try {
+          localStorage.setItem(PLACE_KEY, JSON.stringify(next));
+        } catch {
+          /* sessão privada */
+        }
+        return next;
+      });
+    };
+    window.addEventListener("resize", fit);
+    return () => window.removeEventListener("resize", fit);
+  }, []);
 
   useEffect(() => {
     const host = hostRef.current;
@@ -344,7 +402,6 @@ export function CharacterStage() {
         const viewer = document.createElement("model-viewer") as LiveViewer;
         viewer.setAttribute("src", figure.src);
         viewer.setAttribute("alt", figure.label);
-        viewer.setAttribute("camera-controls", "");
         viewer.setAttribute("autoplay", "");
         viewer.setAttribute("shadow-intensity", "0.8");
         viewer.setAttribute("interaction-prompt", "none");
@@ -723,6 +780,49 @@ export function CharacterStage() {
     gesture(motionWords(mode));
   }
 
+  function onDragStart(event: React.PointerEvent<HTMLElement>) {
+    if ((event.target as HTMLElement).closest("button")) return;
+    const handle = (event.target as HTMLElement).closest(".cast-drag, .cast-note");
+    const stage = stageRef.current;
+    if (!handle || !stage) return;
+    const rect = stage.getBoundingClientRect();
+    dragRef.current = {
+      dx: event.clientX - rect.left,
+      dy: event.clientY - rect.top,
+      handle: handle as HTMLElement,
+    };
+    setDragging(true);
+    (handle as HTMLElement).setPointerCapture(event.pointerId);
+    event.preventDefault();
+    event.stopPropagation();
+  }
+
+  function onDragMove(event: React.PointerEvent<HTMLElement>) {
+    const drag = dragRef.current;
+    const stage = stageRef.current;
+    if (!drag || !stage) return;
+    const rect = stage.getBoundingClientRect();
+    setPlace(clampPlace(event.clientX - drag.dx, event.clientY - drag.dy, rect.width, rect.height));
+  }
+
+  function onDragEnd(event: React.PointerEvent<HTMLElement>) {
+    if (!dragRef.current) return;
+    dragRef.current = null;
+    setDragging(false);
+    setPlace((current) => {
+      if (current) {
+        try {
+          localStorage.setItem(PLACE_KEY, JSON.stringify(current));
+        } catch {
+          /* sessão privada */
+        }
+      }
+      return current;
+    });
+    const handle = (event.target as HTMLElement).closest(".cast-drag, .cast-note") as HTMLElement | null;
+    if (handle?.hasPointerCapture(event.pointerId)) handle.releasePointerCapture(event.pointerId);
+  }
+
   function toggleMute() {
     setMuted((current) => {
       const next = !current;
@@ -733,11 +833,23 @@ export function CharacterStage() {
   }
 
   return (
-    <aside className="cast-stage" aria-label="Figura que conversa contigo">
+    <aside
+      ref={stageRef}
+      className={dragging ? "cast-stage is-dragging" : "cast-stage"}
+      style={place ? { left: place.x, top: place.y, bottom: "auto" } : undefined}
+      aria-label="Figura que conversa contigo. Arrasta para mudar de lugar."
+      onPointerDownCapture={onDragStart}
+      onPointerMove={onDragMove}
+      onPointerUp={onDragEnd}
+      onPointerCancel={onDragEnd}
+    >
       {failed ? (
         <p className="cast-note">A figura não carregou.</p>
       ) : (
-        <div ref={hostRef} className="cast-host" />
+        <div className="cast-figure">
+          <div ref={hostRef} className="cast-host" />
+          <div className="cast-drag" role="button" aria-label="Arrastar personagem" />
+        </div>
       )}
       <div className="cast-tools">
         <button

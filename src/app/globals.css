@@ -129,6 +129,19 @@ body {
   flex-direction: column;
   background: transparent;
   pointer-events: none;
+  cursor: grab;
+}
+
+.cast-stage.is-dragging,
+.cast-stage.is-dragging .cast-drag,
+.cast-stage.is-dragging .cast-note {
+  cursor: grabbing;
+}
+
+.cast-figure {
+  position: relative;
+  width: 100%;
+  pointer-events: none;
 }
 
 .cast-host,
@@ -138,7 +151,19 @@ body {
   height: 180px;
   flex: none;
   background: transparent;
+  pointer-events: none;
+}
+
+.cast-drag,
+.cast-note {
   pointer-events: auto;
+  cursor: grab;
+  touch-action: none;
+}
+
+.cast-drag {
+  position: absolute;
+  inset: 0;
 }
 
 .cast-note {
