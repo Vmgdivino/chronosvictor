@@ -1,4 +1,5 @@
 import { AuthGate } from "@/components/auth-gate";
+import { CharacterStage } from "@/components/character-stage";
 import { CinemaBackdrop } from "@/components/cinema-backdrop";
 import { SiteHeader } from "@/components/site-header";
 import { SoundtrackDock } from "@/components/soundtrack-dock";
@@ -41,6 +42,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
                 <main className="mx-auto w-full max-w-6xl flex-1 px-4 pb-24 pt-4 sm:px-6 sm:pb-28 sm:pt-6 lg:px-8">{children}</main>
                 <AudioHost />
                 <SoundtrackDock />
+                <CharacterStage />
               </AuthGate>
             </div>
           </SceneProvider>

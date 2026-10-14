@@ -1,7 +1,15 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  serverExternalPackages: ["msedge-tts", "ws"],
+  async headers() {
+    return [
+      {
+        source: "/models/cast/:file*",
+        headers: [{ key: "Content-Type", value: "model/gltf-binary" }],
+      },
+    ];
+  },
 };
 
 export default nextConfig;

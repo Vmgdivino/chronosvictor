@@ -3,15 +3,16 @@
 import { Poster } from "@/components/poster";
 import { ProgressBar } from "@/components/progress-bar";
 import { TrailerDialog } from "@/components/trailer-dialog";
+import { useScene } from "@/context/scene-context";
 import { playMovie } from "@/context/sound-context";
 import { useWatched } from "@/context/watched-context";
 import { formatRuntime } from "@/lib/format";
 import { getFranchise } from "@/lib/franchises";
 import { franchiseProgress } from "@/lib/progress";
-import type { WatchFilter } from "@/lib/types";
+import type { Movie, WatchFilter } from "@/lib/types";
 import { ArrowLeft, Check, Clapperboard, Play } from "lucide-react";
 import Link from "next/link";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 const filters: { id: WatchFilter; label: string }[] = [
   { id: "all", label: "Todos" },
@@ -51,16 +52,43 @@ function inkFor(accent: string) {
 export function FranchiseView({ slug }: { slug: string }) {
   const franchise = getFranchise(slug);
   const { ready, watched, watching, toggle, toggleWatching } = useWatched();
+  const { setCast } = useScene();
   const [filter, setFilter] = useState<WatchFilter>("all");
   const [trailer, setTrailer] = useState<{ title: string; youtubeId: string } | null>(null);
   const closeTrailer = useCallback(() => setTrailer(null), []);
+  const spotlight = franchise
+    ? (franchise.movies.find((movie) => movie.id === spotlights[franchise.slug]) ?? franchise.movies[0])
+    : undefined;
 
-  if (!franchise) return null;
+  useEffect(() => {
+    if (!franchise || !spotlight) return;
+    setCast({
+      slug: franchise.slug,
+      movieId: spotlight.id,
+      movieTitle: spotlight.title,
+      franchiseName: franchise.name,
+    });
+    return () => setCast(null);
+  }, [franchise, spotlight, setCast]);
+
+  const focusMovie = useCallback(
+    (movie: Movie) => {
+      if (!franchise) return;
+      playMovie(movie, franchise);
+      setCast({
+        slug: franchise.slug,
+        movieId: movie.id,
+        movieTitle: movie.title,
+        franchiseName: franchise.name,
+      });
+    },
+    [franchise, setCast],
+  );
+
+  if (!franchise || !spotlight) return null;
 
   const progress = franchiseProgress(franchise, watched);
   const ink = inkFor(franchise.accent);
-  const spotlight =
-    franchise.movies.find((movie) => movie.id === spotlights[franchise.slug]) ?? franchise.movies[0];
   const watchingCount = franchise.movies.filter((movie) => watching.has(movie.id)).length;
   const visible = franchise.movies.filter((movie) => {
     const seen = watched.has(movie.id);
@@ -207,11 +235,11 @@ export function FranchiseView({ slug }: { slug: string }) {
                         role="button"
                         tabIndex={0}
                         aria-label={`Ouvir o tema de ${movie.title}`}
-                        onClick={() => playMovie(movie, franchise)}
+                        onClick={() => focusMovie(movie)}
                         onKeyDown={(event) => {
                           if (event.key === "Enter" || event.key === " ") {
                             event.preventDefault();
-                            playMovie(movie, franchise);
+                            focusMovie(movie);
                           }
                         }}
                         className="flex min-w-0 flex-1 cursor-pointer gap-4 rounded-xl text-left"
