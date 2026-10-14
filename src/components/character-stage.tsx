@@ -231,31 +231,6 @@ function speak(text: string, onend?: () => void) {
   })();
 }
 
-function MoveIcon({ mode }: { mode: "run" | "walk" | "idle" }) {
-  if (mode === "idle") {
-    return (
-      <svg viewBox="0 0 24 24" aria-hidden="true">
-        <circle cx="12" cy="5.5" r="1.7" />
-        <path d="M12 8.2v6.2M9.2 20.2 12 15.2l2.8 5M8.2 12.2h7.6" />
-      </svg>
-    );
-  }
-  if (mode === "walk") {
-    return (
-      <svg viewBox="0 0 24 24" aria-hidden="true">
-        <circle cx="13" cy="5.2" r="1.7" />
-        <path d="M12.2 8.2 10.4 13.2 13.2 15.4 11.2 20.2M10.4 13.2 14.6 14.8 16.8 19.6M12.2 9.4 8.4 11.2" />
-      </svg>
-    );
-  }
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <circle cx="14.2" cy="5.2" r="1.7" />
-      <path d="M13.2 8.2 9.6 12.4 12.4 14.8 9.2 19.8M9.6 12.4 15.2 13.6 18.2 18.4M13.2 9.2 8.2 8.4M4.2 7.2h2.4M4.2 10.2h3" />
-    </svg>
-  );
-}
-
 function usableSpeech(text: string) {
   const said = text.replace(/\s+/g, " ").trim();
   if (said.length < 2) return "";
@@ -333,7 +308,22 @@ export function CharacterStage() {
   const { user } = useWatched();
   const stageRef = useRef<HTMLElement>(null);
   const hostRef = useRef<HTMLDivElement>(null);
-  const dragRef = useRef<{ dx: number; dy: number; handle: HTMLElement } | null>(null);
+  const pointersRef = useRef(new Map<number, { x: number; y: number }>());
+  const placeModeRef = useRef(false);
+  const followOffset = useRef({ x: 0, y: 0 });
+  const tapRef = useRef<{ x: number; y: number; t: number; moved: boolean } | null>(null);
+  const lastTap = useRef(0);
+  const cycleTimer = useRef(0);
+  const gestureRef = useRef<{
+    mode: "place" | "pinch";
+    startX: number;
+    startY: number;
+    originX: number;
+    originY: number;
+    moved: boolean;
+    pointerId: number;
+    enteredNow: boolean;
+  } | null>(null);
   const viewerRef = useRef<LiveViewer | null>(null);
   const hearRef = useRef<SpeechListener | null>(null);
   const turnsRef = useRef<Turn[]>([]);
@@ -354,12 +344,11 @@ export function CharacterStage() {
   const earStarting = useRef(false);
   const switchLocalRef = useRef<() => void>(() => undefined);
   const [failed, setFailed] = useState("");
-  const [muted, setMuted] = useState(false);
   const [micReady, setMicReady] = useState(false);
   const [hearing, setHearing] = useState(false);
-  const [motion, setMotion] = useState<"run" | "walk" | "idle">("run");
   const [place, setPlace] = useState<Place | null>(null);
   const [dragging, setDragging] = useState(false);
+  const [placing, setPlacing] = useState(false);
   const figure: Figure = cast ? figureFor(cast.slug, cast.movieId) : figures.adventurer;
 
   useEffect(() => {
@@ -392,6 +381,46 @@ export function CharacterStage() {
   }, []);
 
   useEffect(() => {
+    if (!placing) return;
+    const follow = (event: PointerEvent) => {
+      if (event.pointerType === "touch") return;
+      if (pointersRef.current.size > 0 || gestureRef.current) return;
+      const stage = stageRef.current;
+      if (!stage) return;
+      const rect = stage.getBoundingClientRect();
+      setPlace(
+        clampPlace(
+          event.clientX - followOffset.current.x,
+          event.clientY - followOffset.current.y,
+          rect.width,
+          rect.height,
+        ),
+      );
+    };
+    const dropOutside = (event: PointerEvent) => {
+      if (stageRef.current?.contains(event.target as Node)) return;
+      placeModeRef.current = false;
+      setPlacing(false);
+      setPlace((current) => {
+        if (current) {
+          try {
+            localStorage.setItem(PLACE_KEY, JSON.stringify(current));
+          } catch {
+            /* sessão privada */
+          }
+        }
+        return current;
+      });
+    };
+    window.addEventListener("pointermove", follow);
+    window.addEventListener("pointerdown", dropOutside, true);
+    return () => {
+      window.removeEventListener("pointermove", follow);
+      window.removeEventListener("pointerdown", dropOutside, true);
+    };
+  }, [placing]);
+
+  useEffect(() => {
     const host = hostRef.current;
     if (!host) return;
     let disposed = false;
@@ -402,6 +431,8 @@ export function CharacterStage() {
         const viewer = document.createElement("model-viewer") as LiveViewer;
         viewer.setAttribute("src", figure.src);
         viewer.setAttribute("alt", figure.label);
+        viewer.setAttribute("camera-controls", "");
+        viewer.setAttribute("disable-zoom", "");
         viewer.setAttribute("autoplay", "");
         viewer.setAttribute("shadow-intensity", "0.8");
         viewer.setAttribute("interaction-prompt", "none");
@@ -776,113 +807,148 @@ export function CharacterStage() {
 
   function escolher(mode: "run" | "walk" | "idle") {
     motionRef.current = mode;
-    setMotion(mode);
     gesture(motionWords(mode));
   }
 
-  function onDragStart(event: React.PointerEvent<HTMLElement>) {
-    if ((event.target as HTMLElement).closest("button")) return;
-    const handle = (event.target as HTMLElement).closest(".cast-drag, .cast-note");
+  function rememberPlace(current: Place | null) {
+    if (!current) return current;
+    try {
+      localStorage.setItem(PLACE_KEY, JSON.stringify(current));
+    } catch {
+      /* sessão privada */
+    }
+    return current;
+  }
+
+  function beginGesture(event: React.PointerEvent<HTMLElement>, mode: "place" | "pinch", enteredNow: boolean) {
     const stage = stageRef.current;
-    if (!handle || !stage) return;
+    if (!stage) return;
     const rect = stage.getBoundingClientRect();
-    dragRef.current = {
-      dx: event.clientX - rect.left,
-      dy: event.clientY - rect.top,
-      handle: handle as HTMLElement,
+    const points = [...pointersRef.current.values()];
+    const startX = mode === "pinch" && points.length >= 2 ? (points[0].x + points[1].x) / 2 : event.clientX;
+    const startY = mode === "pinch" && points.length >= 2 ? (points[0].y + points[1].y) / 2 : event.clientY;
+    followOffset.current = { x: startX - rect.left, y: startY - rect.top };
+    gestureRef.current = {
+      mode,
+      startX,
+      startY,
+      originX: rect.left,
+      originY: rect.top,
+      moved: false,
+      pointerId: event.pointerId,
+      enteredNow,
     };
+    if (mode === "place") {
+      placeModeRef.current = true;
+      setPlacing(true);
+    }
     setDragging(true);
-    (handle as HTMLElement).setPointerCapture(event.pointerId);
     event.preventDefault();
     event.stopPropagation();
   }
 
+  function onDragStart(event: React.PointerEvent<HTMLElement>) {
+    pointersRef.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    if (pointersRef.current.size >= 2) {
+      window.clearTimeout(cycleTimer.current);
+      tapRef.current = null;
+      beginGesture(event, "pinch", false);
+      return;
+    }
+    const previous = lastTap.current;
+    const secondTap = previous > 0 && Date.now() - previous < 420;
+    if (secondTap || placeModeRef.current) {
+      window.clearTimeout(cycleTimer.current);
+      lastTap.current = 0;
+      beginGesture(event, "place", !placeModeRef.current);
+      return;
+    }
+    tapRef.current = { x: event.clientX, y: event.clientY, t: Date.now(), moved: false };
+  }
+
   function onDragMove(event: React.PointerEvent<HTMLElement>) {
-    const drag = dragRef.current;
+    if (pointersRef.current.has(event.pointerId)) {
+      pointersRef.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    }
+    const gesture = gestureRef.current;
+    if (!gesture) {
+      const tap = tapRef.current;
+      if (tap && Math.hypot(event.clientX - tap.x, event.clientY - tap.y) > 8) tap.moved = true;
+      return;
+    }
+    let x = event.clientX;
+    let y = event.clientY;
+    if (gesture.mode === "pinch") {
+      const points = [...pointersRef.current.values()];
+      if (points.length >= 2) {
+        x = (points[0].x + points[1].x) / 2;
+        y = (points[0].y + points[1].y) / 2;
+      }
+      event.preventDefault();
+      event.stopPropagation();
+    }
+    const dx = x - gesture.startX;
+    const dy = y - gesture.startY;
+    if (Math.hypot(dx, dy) > 6) gesture.moved = true;
+    if (!gesture.moved) return;
     const stage = stageRef.current;
-    if (!drag || !stage) return;
+    if (!stage) return;
     const rect = stage.getBoundingClientRect();
-    setPlace(clampPlace(event.clientX - drag.dx, event.clientY - drag.dy, rect.width, rect.height));
+    setPlace(clampPlace(gesture.originX + dx, gesture.originY + dy, rect.width, rect.height));
   }
 
   function onDragEnd(event: React.PointerEvent<HTMLElement>) {
-    if (!dragRef.current) return;
-    dragRef.current = null;
-    setDragging(false);
-    setPlace((current) => {
-      if (current) {
-        try {
-          localStorage.setItem(PLACE_KEY, JSON.stringify(current));
-        } catch {
-          /* sessão privada */
-        }
+    pointersRef.current.delete(event.pointerId);
+    const gesture = gestureRef.current;
+    if (gesture?.mode === "pinch") {
+      if (pointersRef.current.size >= 2) return;
+      gestureRef.current = null;
+      setDragging(false);
+      setPlace((current) => rememberPlace(current));
+      event.preventDefault();
+      event.stopPropagation();
+      return;
+    }
+    if (gesture?.mode === "place" && gesture.pointerId === event.pointerId) {
+      const moved = gesture.moved;
+      const enteredNow = gesture.enteredNow;
+      gestureRef.current = null;
+      setDragging(false);
+      if (moved || !enteredNow) {
+        placeModeRef.current = false;
+        setPlacing(false);
+        setPlace((current) => rememberPlace(current));
       }
-      return current;
-    });
-    const handle = (event.target as HTMLElement).closest(".cast-drag, .cast-note") as HTMLElement | null;
-    if (handle?.hasPointerCapture(event.pointerId)) handle.releasePointerCapture(event.pointerId);
-  }
-
-  function toggleMute() {
-    setMuted((current) => {
-      const next = !current;
-      mutedRef.current = next;
-      if (next) haltVoice();
-      return next;
-    });
+      event.preventDefault();
+      event.stopPropagation();
+      return;
+    }
+    const tap = tapRef.current;
+    tapRef.current = null;
+    if (tap && Math.hypot(event.clientX - tap.x, event.clientY - tap.y) > 8) tap.moved = true;
+    if (!tap || tap.moved || placeModeRef.current) return;
+    lastTap.current = Date.now();
+    window.clearTimeout(cycleTimer.current);
+    cycleTimer.current = window.setTimeout(() => {
+      lastTap.current = 0;
+      const order = ["run", "walk", "idle"] as const;
+      const next = order[(order.indexOf(motionRef.current) + 1) % order.length];
+      escolher(next);
+    }, 400);
   }
 
   return (
     <aside
       ref={stageRef}
-      className={dragging ? "cast-stage is-dragging" : "cast-stage"}
+      className={["cast-stage", dragging ? "is-dragging" : "", placing ? "is-placing" : ""].filter(Boolean).join(" ")}
       style={place ? { left: place.x, top: place.y, bottom: "auto" } : undefined}
-      aria-label="Figura que conversa contigo. Arrasta para mudar de lugar."
+      aria-label="Um toque alterna entre correr, andar e parado. Duplo toque, ou dois dedos no telemóvel, muda o lugar."
       onPointerDownCapture={onDragStart}
       onPointerMove={onDragMove}
       onPointerUp={onDragEnd}
       onPointerCancel={onDragEnd}
     >
-      {failed ? (
-        <p className="cast-note">A figura não carregou.</p>
-      ) : (
-        <div className="cast-figure">
-          <div ref={hostRef} className="cast-host" />
-          <div className="cast-drag" role="button" aria-label="Arrastar personagem" />
-        </div>
-      )}
-      <div className="cast-tools">
-        <button
-          type="button"
-          className="cast-mute"
-          aria-pressed={muted}
-          aria-label={muted ? "Ativar voz do personagem" : "Mutar personagem"}
-          onClick={toggleMute}
-        >
-          {muted ? "🔇" : "🔈"}
-        </button>
-        <div className="cast-moves" role="group" aria-label="Movimento do personagem">
-          {(
-            [
-              ["run", "Correr"],
-              ["walk", "Andar"],
-              ["idle", "Parado"],
-            ] as const
-          ).map(([mode, label]) => (
-            <button
-              key={mode}
-              type="button"
-              className={motion === mode ? "cast-move is-on" : "cast-move"}
-              aria-pressed={motion === mode}
-              aria-label={label}
-              title={label}
-              onClick={() => escolher(mode)}
-            >
-              <MoveIcon mode={mode} />
-            </button>
-          ))}
-        </div>
-      </div>
+      {failed ? <p className="cast-note">A figura não carregou.</p> : <div ref={hostRef} className="cast-host" />}
     </aside>
   );
 }

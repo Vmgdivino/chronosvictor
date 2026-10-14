@@ -129,19 +129,16 @@ body {
   flex-direction: column;
   background: transparent;
   pointer-events: none;
-  cursor: grab;
+  user-select: none;
 }
 
-.cast-stage.is-dragging,
-.cast-stage.is-dragging .cast-drag,
+.cast-stage.is-placing .cast-host,
+.cast-stage.is-dragging .cast-host,
+.cast-stage.is-placing .cast-note,
 .cast-stage.is-dragging .cast-note {
   cursor: grabbing;
-}
-
-.cast-figure {
-  position: relative;
-  width: 100%;
-  pointer-events: none;
+  outline: 1px solid rgba(255, 255, 255, 0.35);
+  outline-offset: 2px;
 }
 
 .cast-host,
@@ -151,19 +148,8 @@ body {
   height: 180px;
   flex: none;
   background: transparent;
-  pointer-events: none;
-}
-
-.cast-drag,
-.cast-note {
   pointer-events: auto;
-  cursor: grab;
   touch-action: none;
-}
-
-.cast-drag {
-  position: absolute;
-  inset: 0;
 }
 
 .cast-note {
@@ -173,93 +159,6 @@ body {
   text-align: center;
   font-size: 12px;
   color: rgba(255, 255, 255, 0.72);
-}
-
-.cast-tools {
-  pointer-events: auto;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 4px;
-  margin-top: 4px;
-}
-
-.cast-mute,
-.cast-mic,
-.cast-move {
-  border: 0;
-  border-radius: 999px;
-  background: rgba(8, 9, 13, 0.55);
-  color: white;
-  cursor: pointer;
-}
-
-.cast-mute,
-.cast-mic {
-  display: grid;
-  width: 28px;
-  height: 28px;
-  place-items: center;
-  padding: 0;
-  font-size: 13px;
-  line-height: 1;
-}
-
-.cast-mic svg {
-  width: 14px;
-  height: 14px;
-  fill: currentColor;
-}
-
-.cast-mic {
-  opacity: 0.55;
-}
-
-.cast-mic.is-on {
-  background: transparent;
-  color: white;
-  opacity: 1;
-}
-
-.cast-mic.is-live {
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.55);
-}
-
-.cast-moves {
-  display: flex;
-  gap: 0;
-  margin-left: 2px;
-  opacity: 0.72;
-}
-
-.cast-move {
-  display: grid;
-  width: 22px;
-  height: 22px;
-  place-items: center;
-  padding: 0;
-  background: transparent;
-  color: rgba(255, 255, 255, 0.42);
-}
-
-.cast-move.is-on {
-  background: transparent;
-  color: rgba(255, 255, 255, 0.92);
-}
-
-.cast-move svg {
-  width: 15px;
-  height: 15px;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 1.6;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
-.cast-move svg circle {
-  fill: currentColor;
-  stroke: none;
 }
 
 @media (max-width: 640px) {
