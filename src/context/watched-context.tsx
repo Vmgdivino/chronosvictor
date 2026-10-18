@@ -1,5 +1,6 @@
 "use client";
 
+import { holdLogin, isLoginHeld, readRemember, releaseLogin, syncRememberedPassword, writeRemember } from "@/lib/remember";
 import {
   createContext,
   useCallback,
@@ -17,12 +18,19 @@ const SERVER_SNAPSHOT = JSON.stringify({
   session: null,
   watched: [] as string[],
   watching: [] as string[],
+  known: [] as KnownAccount[],
 });
+
+type KnownAccount = {
+  name: string;
+  password: string;
+};
 
 type UserRecord = {
   name: string;
   salt: string;
   hash: string;
+  password?: string;
   watched: string[];
   watching: string[];
 };
@@ -48,6 +56,7 @@ type WatchedContextValue = {
   register: (username: string, password: string) => Promise<AuthResult>;
   changePassword: (username: string, password: string) => Promise<AuthResult>;
   logout: () => void;
+  knownAccounts: KnownAccount[];
 };
 
 const WatchedContext = createContext<WatchedContextValue | null>(null);
@@ -111,6 +120,13 @@ function listOf(value: unknown) {
   return Array.isArray(value) ? value.filter((item) => typeof item === "string") : [];
 }
 
+function knownOf(store: AccountStore): KnownAccount[] {
+  return Object.values(store.users)
+    .filter((user) => typeof user.password === "string" && user.password.length > 0)
+    .map((user) => ({ name: user.name, password: user.password as string }))
+    .sort((a, b) => a.name.localeCompare(b.name, "pt"));
+}
+
 function snapshotOf(store: AccountStore) {
   const user = store.session ? store.users[store.session] : undefined;
   return JSON.stringify({
@@ -118,6 +134,7 @@ function snapshotOf(store: AccountStore) {
     session: store.session,
     watched: listOf(user?.watched),
     watching: listOf(user?.watching),
+    known: knownOf(store),
   });
 }
 
@@ -169,18 +186,43 @@ export function WatchedProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     schedulePublish(readStore());
   }, []);
+
+  useEffect(() => {
+    let cancel = false;
+    void (async () => {
+      const store = readStore();
+      if (!store.session) return;
+      const user = store.users[store.session];
+      if (!user || user.password) return;
+      const saved = readRemember();
+      if (!saved) return;
+      if (saved.username.trim().toLocaleLowerCase() !== user.name.trim().toLocaleLowerCase()) return;
+      const hash = await hashPassword(saved.password, user.salt);
+      if (cancel || hash !== user.hash) return;
+      const fresh = readStore();
+      const current = fresh.session ? fresh.users[fresh.session] : undefined;
+      if (!current || current.password) return;
+      current.password = saved.password;
+      writeStore(fresh);
+    })();
+    return () => {
+      cancel = true;
+    };
+  }, []);
   const snapshot = useMemo(() => {
     const parsed = JSON.parse(raw) as {
       booted: boolean;
       session: string | null;
       watched: string[];
       watching?: string[];
+      known?: KnownAccount[];
     };
     return {
       booted: parsed.booted,
       session: parsed.session,
       watched: new Set(listOf(parsed.watched)),
       watching: new Set(listOf(parsed.watching)),
+      known: Array.isArray(parsed.known) ? parsed.known : [],
     };
   }, [raw]);
 
@@ -193,8 +235,11 @@ export function WatchedProvider({ children }: { children: ReactNode }) {
     if (!user) return { ok: false, message: "Não há sessão com esse nome. Crie uma conta." };
     const hash = await hashPassword(password, user.salt);
     if (hash !== user.hash) return { ok: false, message: "Nome ou senha não conferem." };
+    if (isLoginHeld()) return { ok: false, message: "" };
+    user.password = password;
     store.session = key;
     writeStore(store);
+    releaseLogin();
     return { ok: true };
   }, []);
 
@@ -206,15 +251,19 @@ export function WatchedProvider({ children }: { children: ReactNode }) {
     if (store.users[key]) return { ok: false, message: "Esse nome já tem uma sessão. Entre com a senha." };
     const salt = createSalt();
     const hash = await hashPassword(password, salt);
+    const name = normalizeName(username);
     store.users[key] = {
-      name: normalizeName(username),
+      name,
       salt,
       hash,
+      password,
       watched: [],
       watching: [],
     };
     store.session = key;
     writeStore(store);
+    writeRemember(name, password);
+    releaseLogin();
     return { ok: true };
   }, []);
 
@@ -228,13 +277,16 @@ export function WatchedProvider({ children }: { children: ReactNode }) {
     const salt = createSalt();
     user.salt = salt;
     user.hash = await hashPassword(password, salt);
+    user.password = password;
     writeStore(store);
+    syncRememberedPassword(user.name, password);
     return { ok: true };
   }, []);
 
   const logout = useCallback(() => {
     const store = readStore();
     store.session = null;
+    holdLogin();
     writeStore(store);
   }, []);
 
@@ -298,6 +350,7 @@ export function WatchedProvider({ children }: { children: ReactNode }) {
       register,
       changePassword,
       logout,
+      knownAccounts: snapshot.known,
     };
   }, [snapshot, toggle, toggleWatching, clear, login, register, changePassword, logout]);
 

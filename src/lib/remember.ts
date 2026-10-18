@@ -1,4 +1,5 @@
 const REMEMBER_KEY = "chronosvictor.remember.v1";
+const HOLD_KEY = "chronosvictor.hold-login";
 
 export type RememberedLogin = {
   username: string;
@@ -34,4 +35,28 @@ export function syncRememberedPassword(username: string, password: string) {
   if (!saved) return;
   if (saved.username.trim().toLocaleLowerCase() !== username.trim().toLocaleLowerCase()) return;
   writeRemember(saved.username, password);
+}
+
+export function holdLogin() {
+  try {
+    sessionStorage.setItem(HOLD_KEY, "1");
+  } catch {
+    return;
+  }
+}
+
+export function releaseLogin() {
+  try {
+    sessionStorage.removeItem(HOLD_KEY);
+  } catch {
+    return;
+  }
+}
+
+export function isLoginHeld() {
+  try {
+    return sessionStorage.getItem(HOLD_KEY) === "1";
+  } catch {
+    return false;
+  }
 }
