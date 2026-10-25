@@ -31,14 +31,13 @@ export function AppInstall({ children }: { children: ReactNode }) {
   const [installed, setInstalled] = useState(false);
   const [promptEvent, setPromptEvent] = useState<BeforeInstallPromptEvent | null>(null);
   const [help, setHelp] = useState(false);
-  const [ios, setIos] = useState(false);
+  const [safariHref, setSafariHref] = useState<string | null>(null);
   const [updateReady, setUpdateReady] = useState(false);
 
   useEffect(() => {
     const media = window.matchMedia("(display-mode: standalone)");
     const sync = () => setInstalled(standalone());
     sync();
-    setIos(iosDevice());
     media.addEventListener("change", sync);
 
     const onPrompt = (event: Event) => {
@@ -110,7 +109,18 @@ export function AppInstall({ children }: { children: ReactNode }) {
     };
   }, []);
 
+  function pageInSafari() {
+    const page = new URL(window.location.href);
+    page.hash = "";
+    return `x-safari-${page.href}`;
+  }
+
   async function download() {
+    if (iosDevice() && !standalone()) {
+      setHelp(false);
+      setSafariHref(pageInSafari());
+      return;
+    }
     if (promptEvent) {
       await promptEvent.prompt();
       const choice = await promptEvent.userChoice;
@@ -174,9 +184,7 @@ export function AppInstall({ children }: { children: ReactNode }) {
           >
             <p id="install-title" className="font-display text-xl">Descarregar</p>
             <p className="mt-2 text-sm leading-relaxed text-muted">
-              {ios
-                ? "No iPhone, abra este site no Safari. Toque em Partilhar e depois em Adicionar ao Ecrã Principal."
-                : "No menu do navegador, escolha Instalar aplicação ou Adicionar ao ecrã inicial."}
+              No menu do navegador, escolha Instalar aplicação ou Adicionar ao ecrã inicial.
             </p>
             <button
               type="button"
@@ -184,6 +192,33 @@ export function AppInstall({ children }: { children: ReactNode }) {
               className="mt-4 min-h-11 w-full rounded-full bg-gold px-4 text-sm font-semibold text-black"
             >
               Entendi
+            </button>
+          </div>
+        </div>
+      ) : null}
+      {safariHref ? (
+        <div className="fixed inset-0 z-[70] grid place-items-center bg-black/70 p-4 backdrop-blur-sm" role="presentation" onClick={() => setSafariHref(null)}>
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="safari-title"
+            className="w-full max-w-sm rounded-3xl border border-white/10 bg-[#0c0e14] p-5 shadow-2xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <p id="safari-title" className="font-display text-xl">Abrir no Safari</p>
+            <p className="mt-2 text-sm leading-relaxed text-muted">Para descarregar no iPhone, esta página abre direto no Safari.</p>
+            <a
+              href={safariHref}
+              className="mt-4 flex min-h-11 w-full items-center justify-center rounded-full bg-gold px-4 text-sm font-semibold text-black"
+            >
+              Abrir no Safari
+            </a>
+            <button
+              type="button"
+              onClick={() => setSafariHref(null)}
+              className="mt-2 min-h-11 w-full rounded-full border border-white/10 px-4 text-sm text-white/80"
+            >
+              Agora não
             </button>
           </div>
         </div>
