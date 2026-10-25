@@ -4,6 +4,7 @@ import { catalogProgress } from "@/lib/progress";
 import { franchises } from "@/lib/franchises";
 import { useWatched } from "@/context/watched-context";
 import { syncRememberedPassword } from "@/lib/remember";
+import { InstallButton } from "@/components/app-install";
 import { VolumeControl } from "@/components/volume-control";
 import { LogOut } from "lucide-react";
 import Link from "next/link";
@@ -47,21 +48,22 @@ export function SiteHeader() {
           </span>
         </Link>
 
-        <div className="flex min-w-0 items-center gap-1.5 sm:gap-3">
+        <div className="flex min-w-0 flex-1 items-center justify-end gap-1.5 sm:gap-3">
           {ready ? (
             <p className="hidden text-xs text-muted lg:block">
               <span className="text-foreground">{catalog.done}</span> de {catalog.total} títulos
             </p>
           ) : null}
+          <InstallButton />
           <VolumeControl />
-          <nav className="flex h-11 shrink-0 items-center rounded-full border border-white/10 bg-white/5 p-1 text-xs sm:text-sm">
+          <nav className="flex h-11 min-w-0 items-center overflow-x-auto rounded-full border border-white/10 bg-white/5 p-1 text-xs sm:shrink-0 sm:text-sm">
             {links.map((link) => {
               const active = pathname === link.href;
               return (
                 <Link
                   key={link.href}
                   href={link.href}
-                  className={`rounded-full px-2.5 py-2 transition sm:px-3 ${
+                  className={`shrink-0 whitespace-nowrap rounded-full px-2.5 py-2 transition sm:px-3 ${
                     active ? "bg-white text-black" : "text-muted hover:text-foreground"
                   }`}
                   aria-current={active ? "page" : undefined}
@@ -83,7 +85,7 @@ export function SiteHeader() {
                   setAccountError("");
                   setAccountNotice("");
                 }}
-                className="inline-flex h-11 items-center gap-1.5 rounded-full border border-white/10 px-2.5 text-sm text-muted transition hover:text-white sm:px-3"
+                className="inline-flex h-11 shrink-0 items-center gap-1.5 rounded-full border border-white/10 px-2.5 text-sm text-muted transition hover:text-white sm:px-3"
               >
                 <span className="hidden max-w-24 truncate text-foreground sm:inline">{user}</span>
                 <LogOut className="h-3.5 w-3.5" aria-hidden />

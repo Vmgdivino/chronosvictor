@@ -8,6 +8,13 @@ const nextConfig: NextConfig = {
         source: "/models/cast/:file*",
         headers: [{ key: "Content-Type", value: "model/gltf-binary" }],
       },
+      {
+        source: "/sw.js",
+        headers: [
+          { key: "Cache-Control", value: "no-cache, no-store, must-revalidate" },
+          { key: "Service-Worker-Allowed", value: "/" },
+        ],
+      },
     ];
   },
 };

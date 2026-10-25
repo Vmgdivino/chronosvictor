@@ -12,7 +12,7 @@ export function VolumeControl() {
       <button
         type="button"
         onClick={() => nudgeVolume(-10)}
-        className="grid h-10 w-9 place-items-center rounded-full text-white/75 hover:text-white"
+        className="hidden h-10 w-9 place-items-center rounded-full text-white/75 hover:text-white sm:grid"
         aria-label="Diminuir volume"
       >
         <Minus className="h-4 w-4" />
@@ -29,7 +29,7 @@ export function VolumeControl() {
       <button
         type="button"
         onClick={() => nudgeVolume(10)}
-        className="grid h-10 w-9 place-items-center rounded-full text-white/75 hover:text-white"
+        className="hidden h-10 w-9 place-items-center rounded-full text-white/75 hover:text-white sm:grid"
         aria-label="Aumentar volume"
       >
         <Plus className="h-4 w-4" />

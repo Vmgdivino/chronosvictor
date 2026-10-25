@@ -10,6 +10,7 @@ import {
   writeRemember,
   type RememberedLogin,
 } from "@/lib/remember";
+import { InstallButton } from "@/components/app-install";
 import { Clapperboard } from "lucide-react";
 import { useEffect, useMemo, useState, useSyncExternalStore, type FormEvent } from "react";
 
@@ -141,6 +142,9 @@ export function AuthScreen() {
           </span>
           <span className="font-display text-lg tracking-tight">
             Chronos<span className="text-gold">Victor</span>
+          </span>
+          <span className="ml-auto">
+            <InstallButton />
           </span>
         </div>
         <p className="mt-6 text-[11px] uppercase tracking-[0.28em] text-gold">Bilheteria</p>
