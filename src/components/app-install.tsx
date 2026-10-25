@@ -1,7 +1,7 @@
 "use client";
 
 import { Download } from "lucide-react";
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 
 const DISMISS_KEY = "chronosvictor.update.dismissed";
 
@@ -27,12 +27,31 @@ function iosDevice() {
   return /iPad|iPhone|iPod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && (nav.maxTouchPoints ?? 0) > 1);
 }
 
+function inSafari() {
+  if (!iosDevice()) return false;
+  return /Safari/i.test(navigator.userAgent) && !/CriOS|FxiOS|EdgiOS|OPiOS|DuckDuckGo|GSA|Instagram|FBAN|FBAV/i.test(navigator.userAgent);
+}
+
+function currentPage() {
+  const page = new URL(window.location.href);
+  page.hash = "";
+  page.searchParams.delete("descarregar");
+  return page;
+}
+
+function safariPageHref() {
+  const page = currentPage();
+  page.searchParams.set("descarregar", "1");
+  return `x-safari-${page.href}`;
+}
+
 export function AppInstall({ children }: { children: ReactNode }) {
   const [installed, setInstalled] = useState(false);
   const [promptEvent, setPromptEvent] = useState<BeforeInstallPromptEvent | null>(null);
   const [help, setHelp] = useState(false);
-  const [safariHref, setSafariHref] = useState<string | null>(null);
+  const [safariAsk, setSafariAsk] = useState<{ href: string; here: boolean } | null>(null);
   const [updateReady, setUpdateReady] = useState(false);
+  const wantsInstall = useRef(false);
 
   useEffect(() => {
     const media = window.matchMedia("(display-mode: standalone)");
@@ -42,7 +61,16 @@ export function AppInstall({ children }: { children: ReactNode }) {
 
     const onPrompt = (event: Event) => {
       event.preventDefault();
-      setPromptEvent(event as BeforeInstallPromptEvent);
+      const prompt = event as BeforeInstallPromptEvent;
+      if (wantsInstall.current) {
+        wantsInstall.current = false;
+        void prompt.prompt().then(async () => {
+          const choice = await prompt.userChoice;
+          if (choice.outcome === "accepted") setInstalled(true);
+        });
+        return;
+      }
+      setPromptEvent(prompt);
     };
     const onInstalled = () => {
       setInstalled(true);
@@ -97,6 +125,25 @@ export function AppInstall({ children }: { children: ReactNode }) {
     document.addEventListener("visibilitychange", onVisible);
     window.addEventListener("focus", onVisible);
 
+    const opened = new URL(window.location.href);
+    if (opened.searchParams.get("descarregar") === "1") {
+      wantsInstall.current = true;
+      opened.searchParams.delete("descarregar");
+      const clean = `${opened.pathname}${opened.search}${opened.hash}`;
+      window.history.replaceState(null, "", clean || "/");
+      if (iosDevice()) {
+        const url = `${opened.origin}${clean || "/"}`;
+        const share = navigator.share?.bind(navigator);
+        if (!share) {
+          setSafariAsk({ href: url, here: true });
+        } else {
+          void share({ title: "ChronosVictor", url }).catch(() => {
+            setSafariAsk({ href: url, here: true });
+          });
+        }
+      }
+    }
+
     return () => {
       workerStop = true;
       versionStop = true;
@@ -109,16 +156,25 @@ export function AppInstall({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  function pageInSafari() {
-    const page = new URL(window.location.href);
-    page.hash = "";
-    return `x-safari-${page.href}`;
+  async function savePage() {
+    if (promptEvent) {
+      await promptEvent.prompt();
+      const choice = await promptEvent.userChoice;
+      setPromptEvent(null);
+      if (choice.outcome === "accepted") setInstalled(true);
+      return;
+    }
+    const page = currentPage().href;
+    if (typeof navigator.share === "function") {
+      await navigator.share({ title: "ChronosVictor", url: page });
+    }
   }
 
   async function download() {
     if (iosDevice() && !standalone()) {
       setHelp(false);
-      setSafariHref(pageInSafari());
+      const here = inSafari();
+      setSafariAsk({ href: here ? currentPage().href : safariPageHref(), here });
       return;
     }
     if (promptEvent) {
@@ -196,8 +252,8 @@ export function AppInstall({ children }: { children: ReactNode }) {
           </div>
         </div>
       ) : null}
-      {safariHref ? (
-        <div className="fixed inset-0 z-[70] grid place-items-center bg-black/70 p-4 backdrop-blur-sm" role="presentation" onClick={() => setSafariHref(null)}>
+      {safariAsk ? (
+        <div className="fixed inset-0 z-[70] grid place-items-center bg-black/70 p-4 backdrop-blur-sm" role="presentation" onClick={() => setSafariAsk(null)}>
           <div
             role="dialog"
             aria-modal="true"
@@ -206,16 +262,26 @@ export function AppInstall({ children }: { children: ReactNode }) {
             onClick={(event) => event.stopPropagation()}
           >
             <p id="safari-title" className="font-display text-xl">Abrir no Safari</p>
-            <p className="mt-2 text-sm leading-relaxed text-muted">Para descarregar no iPhone, esta página abre direto no Safari.</p>
+            <p className="mt-2 text-sm leading-relaxed text-muted">Ao ir para esta página, o descarregar começa no Safari.</p>
             <a
-              href={safariHref}
+              href={safariAsk.href}
               className="mt-4 flex min-h-11 w-full items-center justify-center rounded-full bg-gold px-4 text-sm font-semibold text-black"
+              onClick={(event) => {
+                if (!safariAsk.here && !promptEvent) return;
+                event.preventDefault();
+                void savePage()
+                  .catch(() => undefined)
+                  .finally(() => {
+                    setSafariAsk(null);
+                    if (!safariAsk.here) window.location.assign(safariAsk.href);
+                  });
+              }}
             >
-              Abrir no Safari
+              Ir para a página
             </a>
             <button
               type="button"
-              onClick={() => setSafariHref(null)}
+              onClick={() => setSafariAsk(null)}
               className="mt-2 min-h-11 w-full rounded-full border border-white/10 px-4 text-sm text-white/80"
             >
               Agora não
